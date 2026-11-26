@@ -125,3 +125,6 @@ main.arrastando { outline: 2px dashed var(--marrom); outline-offset: -8px; }
 .acoes-backup { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .aviso-ios { display: flex; align-items: center; gap: 10px; }
 .aviso-ios p { margin: 0; flex: 1; }
+
+.passos-instalar { margin: 8px 0 4px; padding-left: 1.3em; }
+.passos-instalar li + li { margin-top: 6px; }

@@ -13,6 +13,8 @@ Um leitor de PDFs em forma de estante. Os livros ficam com a capa à mostra, cad
 
 - **Estante com capas:** a capa de cada livro é a primeira página do PDF, com uma barrinha que mostra quanto você já leu.
 - **Continuar lendo:** o último livro aberto fica em destaque e volta direto para a página onde você parou.
+- **Rolagem ou página por página:** no botão **Aa**, escolha ler rolando ou uma página por vez, como num Kindle. Para virar a página, arraste com o dedo, toque na borda da tela ou use as setas do teclado ou a roda do mouse.
+- **Temas de leitura:** Original, Sépia, Escuro e Preto, para a vista ficar confortável. A escolha fica guardada no aparelho.
 - **Sumário lateral:** usa os capítulos do próprio PDF. Se o PDF não tiver sumário, lista as páginas.
 - **Marcadores:** marque páginas com ou sem um nome.
 - **Busca no livro:** acha a palavra com ou sem acento e mostra cada resultado na página (Ctrl+F).
@@ -28,8 +30,8 @@ Os PDFs, o progresso e as marcações são guardados no navegador do próprio ap
 
 ## Como instalar
 
-- **Android (Chrome):** abra o endereço, toque no menu ⋮ e depois em **Instalar app**.
-- **iPhone e iPad (Safari):** abra o endereço, toque em **Compartilhar** e depois em **Adicionar à Tela de Início**. No iPhone é importante instalar: fora do app instalado, o Safari pode apagar os dados de sites que ficam dias sem uso.
+- **Android (Chrome):** abra o endereço e toque em **Instalar app**, no topo da estante. Se o botão não aparecer, use o menu ⋮ e depois **Instalar app**.
+- **iPhone e iPad (Safari):** abra o endereço e toque em **Instalar app** para ver o passo a passo: **Compartilhar** e depois em **Adicionar à Tela de Início**. No iPhone é importante instalar: fora do app instalado, o Safari pode apagar os dados de sites que ficam dias sem uso.
 - **Notebook (Chrome ou Edge):** abra o endereço e clique no ícone de instalar na barra de endereço.
 - **Notebook com Windows, como programa:** também há uma versão que abre numa janela própria, com atalho na área de trabalho. Veja [No notebook, como programa](#no-notebook-como-programa).
 

@@ -8,6 +8,8 @@ import { instalarPainel } from './painel.js';
 import { instalarBusca } from './busca.js';
 import { instalarMarcaTexto } from './marca-texto.js';
 import { anunciar } from '../estante/tela-estante.js';
+import { instalarOpcoes } from './opcoes.js';
+import { lerPreferencias } from '../util/preferencias.js';
 
 
 /**
@@ -53,8 +55,10 @@ export async function mostrarLeitor(main, repo, id) {
   const rolagem = el('div', { className: 'rolagem', tabIndex: 0 });
   rolagem.setAttribute('aria-label', `Páginas de ${livro.titulo}`);
   const lateral = el('div', { className: 'lateral' });
-  const corpo = el('div', { className: 'corpo-leitor' }, lateral, rolagem);
+  const corpo = el('div', { className: 'corpo-leitor' }, rolagem, lateral);
+  const preferencias = lerPreferencias();
   const raiz = el('div', { className: 'leitor' }, barra, faixas, corpo);
+  raiz.dataset.tema = preferencias.tema;
   main.replaceChildren(raiz);
 
   let pdf;
@@ -84,7 +88,7 @@ export async function mostrarLeitor(main, repo, id) {
     raiz.dispatchEvent(new CustomEvent('pagina-mudou', { detail: { pagina } }));
   };
 
-  const vis = await criarVisualizador(rolagem, pdf, { aoMudarPagina });
+  const vis = await criarVisualizador(rolagem, pdf, { aoMudarPagina, modo: preferencias.modo });
   vis.irPara(livro.pagina, livro.posicao);
   campo.value = String(vis.paginaAtual().pagina);
   if (livro.ultimaLeitura == null) {
@@ -92,7 +96,11 @@ export async function mostrarLeitor(main, repo, id) {
     salvarAgora();
   }
 
-  const irPara = (n, pos = 0) => { vis.irPara(n, pos); pendente = vis.paginaAtual(); salvarAgora(); };
+  const irPara = (n, pos = 0) => {
+    vis.irPara(n, pos, { suave: vis.modo() === 'pagina' && Math.abs(n - vis.paginaAtual().pagina) === 1 });
+    pendente = vis.paginaAtual();
+    salvarAgora();
+  };
 
   campo.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') {
@@ -124,7 +132,7 @@ export async function mostrarLeitor(main, repo, id) {
       if (!digitando) { ev.preventDefault(); sair(); }
       return;
     }
-    if (digitando || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (ev.defaultPrevented || digitando || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     const { pagina } = vis.paginaAtual();
     if (ev.key === 'PageDown' || ev.key === 'ArrowRight') { ev.preventDefault(); irPara(pagina + 1); }
     else if (ev.key === 'PageUp' || ev.key === 'ArrowLeft') { ev.preventDefault(); irPara(pagina - 1); }
@@ -180,4 +188,4 @@ export async function mostrarLeitor(main, repo, id) {
 }
 
 /** Partes do leitor, instaladas em ordem (o marca-texto usa o painel). */
-const extensoes = [instalarPainel, instalarBusca, instalarMarcaTexto];
+const extensoes = [instalarOpcoes, instalarPainel, instalarBusca, instalarMarcaTexto];

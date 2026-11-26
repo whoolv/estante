@@ -1,6 +1,9 @@
 // Ponto de entrada da Estante: escolhe a tela pelo endereço (#/ ou #/livro/<id>).
 import { abrirRepositorio } from './dados/repositorio.js';
 import { mostrarEstante } from './estante/tela-estante.js';
+import { escutarConvite } from './util/instalar.js';
+
+escutarConvite();
 
 const main = document.getElementById('app');
 const repoPronto = abrirRepositorio();

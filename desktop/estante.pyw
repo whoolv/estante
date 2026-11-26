@@ -82,7 +82,7 @@ def main() -> None:
     janela_ref["janela"] = janela
     janela.events.shown += _por_icone
     try:
-        webview.start(private_mode=False, storage_path=str(DADOS))
+        webview.start(private_mode=False, storage_path=str(DADOS), icon=str(ICONE))
     finally:
         srv.shutdown()
 

@@ -1,4 +1,4 @@
-// Mostra as páginas do PDF em rolagem contínua, renderizando só as que estão perto da tela.
+// Mostra as páginas do PDF em rolagem contínua ou uma por vez (modo página), renderizando só as que estão perto da tela.
 import { pdfjs } from '../pdf/pdf.js';
 import { densidadeDoCanvas } from '../util/canvas.js';
 
@@ -13,9 +13,9 @@ export const ZOOM_MAX = 3;
 /**
  * @param {HTMLElement} container  elemento com rolagem (overflow: auto)
  * @param {import('../pdf/pdf.js').pdfjs.PDFDocumentProxy} pdf
- * @param {{aoMudarPagina?: (pagina:number, posicao:number) => void}} opcoes
+ * @param {{aoMudarPagina?: (pagina:number, posicao:number) => void, modo?: 'rolagem'|'pagina'}} opcoes
  */
-export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) {
+export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: modoInicial = 'rolagem' } = {}) {
   const total = pdf.numPages;
   const primeira = await pdf.getPage(1);
   const base = primeira.getViewport({ scale: 1 });
@@ -23,6 +23,9 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
   const proporcaoPadrao = base.height / base.width;
 
   let zoom = 1;               // multiplicador sobre "ajustar à largura"
+  let modo = modoInicial;     // 'rolagem' ou 'pagina'
+  const emPagina = () => modo === 'pagina';
+  const reduzirMovimento = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   let atual = { pagina: 1, posicao: 0 };
   const renderizadas = new Map(); // n -> {tarefa, camada}
 
@@ -40,13 +43,21 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
   }
   container.replaceChildren(trilho);
 
-  const larguraAjustada = () => Math.max(200, Math.min(container.clientWidth - MARGEM * 2, LARGURA_MAX));
+  const larguraAjustada = () => {
+    if (!emPagina()) return Math.max(200, Math.min(container.clientWidth - MARGEM * 2, LARGURA_MAX));
+    // modo página: a página inteira cabe na tela
+    const porAltura = (container.clientHeight - MARGEM * 2) / proporcaoPadrao;
+    return Math.max(120, Math.min(container.clientWidth - MARGEM * 2, porAltura));
+  };
+  const folga = () => (emPagina() ? Math.max(0, (container.clientWidth - larguraPagina()) / 2) : 0);
   const larguraPagina = () => Math.round(larguraAjustada() * zoom);
   const escala = () => larguraPagina() / base.width;
 
   function dimensionar() {
     const w = larguraPagina();
     trilho.style.setProperty('--largura', `${w}px`);
+    trilho.style.setProperty('--folga', `${folga()}px`);
+    container.classList.toggle('modo-pagina', emPagina());
     for (let n = 1; n <= total; n++) {
       elementos[n - 1].style.height = `${Math.round(w * (proporcoes.get(n) ?? proporcaoPadrao))}px`;
     }
@@ -111,6 +122,16 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
 
   /** Página cujo topo está mais perto do topo visível (busca binária sobre offsetTop). */
   function calcularAtual() {
+    if (emPagina()) {
+      const meioTela = container.scrollLeft + container.clientWidth / 2;
+      let lo = 0;
+      let hi = total - 1;
+      while (lo < hi) {
+        const meio = (lo + hi + 1) >> 1;
+        if (elementos[meio].offsetLeft - folga() <= meioTela) lo = meio; else hi = meio - 1;
+      }
+      return { pagina: lo + 1, posicao: 0 };
+    }
     const topo = container.scrollTop + 1;
     let lo = 0;
     let hi = total - 1;
@@ -123,8 +144,14 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
     return { pagina: lo + 1, posicao };
   }
 
+  let alvo = null;       // página para onde a animação está indo (modo página)
+  let fimAlvo = 0;
   function atualizar() {
-    const novo = calcularAtual();
+    let novo = calcularAtual();
+    if (alvo !== null) {
+      // durante a animação a página atual continua sendo o destino
+      if (novo.pagina === alvo) { alvo = null; clearTimeout(fimAlvo); } else novo = { pagina: alvo, posicao: 0 };
+    }
     for (const n of [...renderizadas.keys()]) if (Math.abs(n - novo.pagina) > LIBERA_RAIO) liberar(n);
     for (let n = Math.max(1, novo.pagina - RENDER_RAIO); n <= Math.min(total, novo.pagina + RENDER_RAIO); n++) renderizar(n);
     const mudou = novo.pagina !== atual.pagina || Math.abs(novo.posicao - atual.posicao) > 0.001;
@@ -136,12 +163,51 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
   const aoRolar = () => { if (!quadro) quadro = requestAnimationFrame(() => { quadro = 0; atualizar(); }); };
   container.addEventListener('scroll', aoRolar, { passive: true });
 
-  function irPara(pagina, posicao = 0) {
+  function irPara(pagina, posicao = 0, { suave = false } = {}) {
     const n = Math.min(Math.max(1, Math.round(pagina) || 1), total);
     const el = elementos[n - 1];
+    if (emPagina()) {
+      const esquerda = el.offsetLeft - folga();
+      // (mexer no scrollTop aqui cancelaria a animação)
+      if (suave && !reduzirMovimento()) {
+        alvo = n;
+        clearTimeout(fimAlvo);
+        fimAlvo = setTimeout(() => { alvo = null; atualizar(); }, 1200); // se um arraste interromper a animação
+        container.scrollTo({ left: esquerda, behavior: 'smooth' });
+      } else { alvo = null; container.scrollTop = 0; container.scrollLeft = esquerda; }
+      // a página nova já conta como atual (a animação termina sozinha)
+      for (let k = Math.max(1, n - RENDER_RAIO); k <= Math.min(total, n + RENDER_RAIO); k++) renderizar(k);
+      if (n !== atual.pagina) { atual = { pagina: n, posicao: 0 }; aoMudarPagina?.(n, 0); }
+      if (!suave) atualizar();
+      return;
+    }
     container.scrollTop = el.offsetTop + posicao * (el.offsetHeight + ESPACO);
     atualizar();
   }
+
+  // Modo página: toque nas bordas e roda do mouse viram a página
+  const virar = (delta) => irPara(atual.pagina + delta, 0, { suave: true });
+  const aoClicar = (ev) => {
+    if (!emPagina() || ev.button !== 0) return;
+    if (String(globalThis.getSelection?.() ?? '').trim()) return;
+    if (ev.target instanceof Element && ev.target.closest('button, a, input, .flutuante')) return;
+    const caixa = container.getBoundingClientRect();
+    const x = (ev.clientX - caixa.left) / caixa.width;
+    if (x < 0.3) virar(-1);
+    else if (x > 0.7) virar(1);
+  };
+  let ultimaRoda = 0;
+  const aoRodar = (ev) => {
+    if (!emPagina() || ev.ctrlKey || Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
+    if (container.scrollHeight > container.clientHeight + 2) return; // com zoom, a roda rola a página
+    ev.preventDefault();
+    const agora = Date.now();
+    if (agora - ultimaRoda < 350) return;
+    ultimaRoda = agora;
+    virar(ev.deltaY > 0 ? 1 : -1);
+  };
+  container.addEventListener('click', aoClicar);
+  container.addEventListener('wheel', aoRodar, { passive: false });
 
   function refazer() {
     const guardado = { ...atual };
@@ -151,10 +217,13 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
   }
 
   let larguraAnterior = container.clientWidth;
+  let alturaAnterior = container.clientHeight;
   const observador = new ResizeObserver(() => {
-    if (Math.abs(container.clientWidth - larguraAnterior) < 2) return;
+    const mudouLargura = Math.abs(container.clientWidth - larguraAnterior) >= 2;
+    const mudouAltura = emPagina() && Math.abs(container.clientHeight - alturaAnterior) >= 2;
     larguraAnterior = container.clientWidth;
-    refazer();
+    alturaAnterior = container.clientHeight;
+    if (mudouLargura || mudouAltura) refazer();
   });
   observador.observe(container);
 
@@ -172,12 +241,24 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
       refazer();
     },
     zoom: () => zoom,
+    modo: () => modo,
+    definirModo(m) {
+      const novo = m === 'pagina' ? 'pagina' : 'rolagem';
+      if (novo === modo) return;
+      modo = novo;
+      zoom = 1;
+      refazer();
+    },
     elementoDaPagina: (n) => elementos[n - 1],
     renderizadas: () => [...renderizadas.keys()].filter((n) => elementos[n - 1].dataset.renderizada),
     destruir() {
       observador.disconnect();
       container.removeEventListener('scroll', aoRolar);
+      container.removeEventListener('click', aoClicar);
+      container.removeEventListener('wheel', aoRodar);
+      container.classList.remove('modo-pagina');
       cancelAnimationFrame(quadro);
+      clearTimeout(fimAlvo);
       for (const n of [...renderizadas.keys()]) liberar(n);
     },
   };

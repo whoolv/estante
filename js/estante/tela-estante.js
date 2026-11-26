@@ -1,7 +1,8 @@
 // Tela inicial: "Continuar lendo" + a estante com as capas.
 import { hashArquivo } from '../util/hash.js';
 import { tempoRelativo } from '../util/tempo.js';
-import { percentualLido, tituloInicial } from '../util/livro.js';
+import { percentualLido, tituloInicial, tituloPareceArquivo } from '../util/livro.js';
+import { comoInstalar, ambienteAtual, temConvite, usarConvite } from '../util/instalar.js';
 import { normalizarBusca } from '../util/texto.js';
 import { ErroLivroRepetido, ErroSemEspaco } from '../dados/repositorio.js';
 import { carregarPdf, lerInfo, gerarCapa, ErroNaoEPdf, ErroPdfComSenha } from '../pdf/pdf.js';
@@ -102,6 +103,19 @@ export async function mostrarEstante(main, repo) {
   const busca = el('input', { type: 'search', className: 'busca', placeholder: 'Buscar livro', autocomplete: 'off' });
   busca.setAttribute('aria-label', 'Buscar livro');
   const botaoAdicionar = el('button', { type: 'button', className: 'botao primario', textContent: 'Adicionar PDF' });
+  const botaoInstalar = el('button', { type: 'button', className: 'botao instalar', textContent: 'Instalar app', hidden: true });
+  const mostrarInstalar = () => { botaoInstalar.hidden = !comoInstalar(ambienteAtual(temConvite())); };
+  mostrarInstalar();
+  addEventListener('estante:convite', mostrarInstalar);
+  botaoInstalar.addEventListener('click', async () => {
+    const jeito = comoInstalar(ambienteAtual(temConvite()));
+    if (jeito === 'prompt') {
+      if (await usarConvite()) anunciar('App instalado.');
+      mostrarInstalar();
+    } else if (jeito) {
+      await mostrarPassosInstalar(jeito);
+    }
+  });
   const avisos = el('div', { className: 'avisos' });
   avisos.setAttribute('role', 'status');
   const areaContinuar = el('div', { className: 'area-continuar' });
@@ -122,7 +136,7 @@ export async function mostrarEstante(main, repo) {
   main.replaceChildren(
     el('header', { className: 'topo-estante' },
       el('h1', { className: 'marca', textContent: 'Estante' }),
-      el('div', { className: 'acoes-topo' }, busca, botaoAdicionar)),
+      el('div', { className: 'acoes-topo' }, busca, botaoInstalar, botaoAdicionar)),
     avisoIos(),
     avisos,
     areaContinuar,
@@ -216,6 +230,7 @@ export async function mostrarEstante(main, repo) {
   async function desenhar() {
     mostrarEspaco();
     livros = await repo.listarLivros();
+    await corrigirTitulosDeArquivo(repo, livros).catch(() => {});
     lista.replaceChildren(...(await Promise.all(livros.map(itemDoLivro))));
     vazio.hidden = livros.length > 0;
     filtrar(false);
@@ -323,6 +338,7 @@ export async function mostrarEstante(main, repo) {
 
   return () => {
     delete main.dataset.pronta;
+    removeEventListener('estante:convite', mostrarInstalar);
     entrada.removeEventListener('change', aoEscolher);
     entradaBackup.removeEventListener('change', aoEscolherBackup);
     main.removeEventListener('dragover', aoArrastar);
@@ -376,4 +392,27 @@ export function abrirDialogo(dlg, aoAbrir) {
     dlg.showModal();
     aoAbrir?.();
   });
+}
+
+const PASSOS = {
+  ios: ['Toque no botão Compartilhar do Safari (o quadrado com a seta para cima).', 'Escolha Adicionar à Tela de Início.', 'Toque em Adicionar. A Estante aparece na tela de início como um app.'],
+  menu: ['Toque no menu do navegador (⋮, no canto de cima).', 'Escolha Instalar app ou Adicionar à tela inicial.', 'Confirme. A Estante aparece junto com os seus apps.'],
+};
+
+async function mostrarPassosInstalar(jeito) {
+  const dlg = document.getElementById('dlg-instalar');
+  dlg.querySelector('ol').replaceChildren(...PASSOS[jeito].map((t) => el('li', { textContent: t })));
+  await abrirDialogo(dlg);
+}
+
+/** Corrige títulos que vieram com o nome interno do arquivo (ex.: "Kurose_menor.indb"). */
+async function corrigirTitulosDeArquivo(repo, livros) {
+  let mudou = false;
+  for (const l of livros) {
+    if (l.arquivoNome && tituloPareceArquivo(l.titulo)) {
+      const novo = tituloInicial('', l.arquivoNome);
+      if (novo && novo !== l.titulo) { await repo.renomearLivro(l.id, novo); l.titulo = novo; mudou = true; }
+    }
+  }
+  return mudou;
 }

@@ -72,3 +72,4 @@ dialog p { margin: 0 0 18px; color: var(--creme-suave); }
 .avisos:empty { display: none; }
 .aviso { margin: 0 0 8px; padding: 12px 16px; border-radius: 12px; background: var(--marrom-escuro); color: var(--creme); }
 .aviso.erro { border-left: 4px solid #e9b9a6; }
+.botao[hidden], .botao-icone[hidden] { display: none; }
