@@ -29,6 +29,8 @@ async function rotear() {
 window.addEventListener('hashchange', rotear);
 rotear();
 
-if ('serviceWorker' in navigator) {
+// No notebook (janela própria) os arquivos vêm da pasta do projeto: sem cópia offline, sempre a versão mais nova.
+const naJanelaDoNotebook = location.hostname === '127.0.0.1' && location.port === '47821';
+if ('serviceWorker' in navigator && !naJanelaDoNotebook) {
   navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }

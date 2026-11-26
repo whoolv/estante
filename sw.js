@@ -1,6 +1,6 @@
 // Service worker da Estante: guarda o app no aparelho para abrir sem internet.
 // Os livros não passam por aqui (ficam no IndexedDB).
-const VERSAO = 'estante-e82ac2103e64';
+const VERSAO = 'estante-95f5e550c773';
 const ARQUIVOS = [
   './',
   'index.html',

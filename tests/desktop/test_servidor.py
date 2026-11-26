@@ -125,3 +125,17 @@ def test_pedido_para_mostrar_janela_chama_funcao():
         assert chamadas == [1]
     finally:
         srv.shutdown()
+
+
+def test_sw_no_notebook_limpa_a_copia_guardada():
+    porta = porta_livre()
+    srv = subir(porta)
+    try:
+        status, tipo, corpo = pedir(porta, "/sw.js")
+        assert status == 200
+        assert tipo.startswith("text/javascript")
+        texto = corpo.decode("utf-8")
+        assert "unregister" in texto and "caches.delete" in texto and "skipWaiting" in texto
+        assert "ARQUIVOS" not in texto
+    finally:
+        srv.shutdown()

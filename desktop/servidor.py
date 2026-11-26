@@ -17,6 +17,19 @@ from urllib.parse import unquote, urlsplit
 PORTA = 47821
 HOST = "127.0.0.1"
 
+# No notebook os arquivos já vêm da pasta: a cópia offline do app só atrapalharia as atualizações.
+# Este service worker substitui o do site, apaga a cópia guardada, se desliga e recarrega a janela.
+SW_LIMPEZA = b"""// Estante no notebook: sem copia offline (os arquivos ja sao locais).
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (ev) => {
+  ev.waitUntil((async () => {
+    for (const nome of await caches.keys()) await caches.delete(nome);
+    await self.registration.unregister();
+    for (const c of await self.clients.matchAll({ type: 'window' })) c.navigate(c.url);
+  })());
+});
+"""
+
 
 class _Pedidos(SimpleHTTPRequestHandler):
     extensions_map = {
@@ -53,6 +66,13 @@ class _Pedidos(SimpleHTTPRequestHandler):
         return None
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/sw.js":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(SW_LIMPEZA)))
+            self.end_headers()
+            self.wfile.write(SW_LIMPEZA)
+            return
         if not self._dentro_da_raiz():
             self.send_error(404)
             return
