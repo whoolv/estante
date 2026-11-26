@@ -1,0 +1,116 @@
+/* Tela inicial */
+main[data-tela="estante"] { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+main.arrastando { outline: 2px dashed var(--marrom); outline-offset: -8px; }
+
+.topo-estante {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 22px 0 18px;
+}
+.marca { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1; letter-spacing: .01em; }
+.acoes-topo { display: flex; gap: 10px; flex: 1 1 320px; justify-content: flex-end; }
+.acoes-topo .busca { max-width: 280px; }
+.acoes-topo .botao { white-space: nowrap; flex: none; }
+.titulo-secao { font-size: 1.15rem; color: var(--creme-suave); margin: 0 0 14px; }
+
+/* Continuar lendo */
+.area-continuar:empty { display: none; }
+.continuar {
+  display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center;
+  padding: 20px; margin: 6px 0 34px; border-radius: 20px;
+  background: linear-gradient(135deg, #1f1d1a, #181715);
+  border: 1px solid var(--marrom-escuro);
+}
+.continuar-capa img {
+  width: 104px; border-radius: 2px 5px 5px 2px;
+  box-shadow: 8px 10px 22px rgba(0, 0, 0, .55), inset 3px 0 0 rgba(0, 0, 0, .18);
+}
+.continuar-texto { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.continuar-texto .titulo-secao { margin: 0; font-size: 1rem; }
+.continuar-livro { margin: 0; font-family: var(--serif); font-size: clamp(1.3rem, 3.6vw, 1.75rem); line-height: 1.2; overflow-wrap: anywhere; }
+.continuar-onde { margin: 0; color: var(--creme-suave); }
+.continuar .progresso { width: min(320px, 100%); margin: 4px 0 8px; }
+
+/* Barrinha de progresso */
+.progresso { height: 4px; border-radius: 4px; background: var(--marrom-escuro); overflow: hidden; }
+.progresso-preenchido { display: block; height: 100%; width: var(--p, 0%); background: var(--creme); }
+
+/* A estante */
+.vazio {
+  padding: 40px 20px; text-align: center; color: var(--creme-suave); font-family: var(--serif); font-size: 1.15rem;
+  border: 1px dashed var(--marrom-escuro); border-radius: 18px;
+}
+.livros {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); row-gap: 34px; column-gap: 0;
+}
+.livro { display: grid; grid-template-rows: auto auto auto auto; min-width: 0; }
+.livro[hidden] { display: none; }
+
+/* O nicho: a parede do fundo, onde a capa fica em pé */
+.nicho {
+  height: 214px; display: flex; align-items: flex-end; justify-content: center; padding: 0 14px;
+  background: linear-gradient(180deg, #161514 0%, #1d1b18 100%);
+}
+.capa {
+  display: block; padding: 0; border: 0; background: none; cursor: pointer; max-width: 100%;
+  border-radius: 2px 5px 5px 2px; position: relative; -webkit-touch-callout: none; user-select: none;
+  transition: transform .18s ease;
+}
+.capa img {
+  max-height: 196px; width: auto; max-width: 100%; border-radius: 2px 5px 5px 2px;
+  box-shadow: 6px 0 14px rgba(0, 0, 0, .5), inset 3px 0 0 rgba(0, 0, 0, .2);
+}
+.capa::before { /* lombada: sombra do vinco à esquerda */
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 9px; border-radius: 2px 0 0 2px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .35), rgba(255, 255, 255, .08) 60%, transparent);
+  pointer-events: none;
+}
+.capa:hover { transform: translateY(-6px); }
+.capa:focus-visible { outline-offset: 4px; }
+
+/* A tábua: face de cima clara + borda da frente escura; peças vizinhas formam uma tábua contínua */
+.tabua {
+  height: 18px; position: relative;
+  background:
+    linear-gradient(180deg, #a3957a 0, #8a7d63 5px, #6e634e 6px, #3a352c 18px);
+  box-shadow: 0 10px 14px -6px rgba(0, 0, 0, .7);
+}
+.livro .progresso { margin: 12px 14px 0; }
+.rotulo { display: flex; align-items: flex-start; gap: 2px; padding: 6px 4px 0 14px; min-width: 0; }
+.nome {
+  flex: 1; min-width: 0; padding-top: 10px; font-size: .92rem; line-height: 1.3; color: var(--creme);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+}
+.opcoes {
+  flex: none; width: var(--toque); height: var(--toque); border: 0; border-radius: 999px; background: none;
+  color: var(--creme-suave); font-size: 1.25rem; cursor: pointer; line-height: 1;
+}
+.opcoes:hover { background: var(--marrom-escuro); color: var(--creme); }
+
+/* Menu do livro */
+.menu-livro {
+  position: absolute; z-index: 20; min-width: 180px; padding: 6px; display: grid;
+  background: #22201d; border: 1px solid var(--marrom-escuro); border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+}
+.menu-livro button {
+  min-height: var(--toque); text-align: left; padding: 0 14px; border: 0; border-radius: 10px;
+  background: none; color: var(--creme); cursor: pointer;
+}
+.menu-livro button:hover, .menu-livro button:focus-visible { background: var(--marrom-escuro); outline: none; }
+
+@media (max-width: 599px) {
+  .livros { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 26px; }
+  .nicho { height: 150px; padding: 0 8px; }
+  .capa img { max-height: 136px; }
+  .livro .progresso { margin: 10px 8px 0; }
+  .rotulo { padding-left: 8px; }
+  .nome { font-size: .85rem; }
+  .acoes-topo { flex-basis: 100%; }
+  .acoes-topo .busca { max-width: none; }
+  .continuar { gap: 14px; padding: 16px; align-items: start; }
+  .continuar-capa img { width: 72px; }
+}
+@media (max-width: 359px) {
+  .livros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

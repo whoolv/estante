@@ -7,13 +7,40 @@
   <meta name="description" content="Seus PDFs numa estante: continue de onde parou, com marcadores, sumário, busca e marca-texto.">
   <meta name="theme-color" content="#141414">
   <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/estante.css">
+  <link rel="stylesheet" href="css/leitor.css">
 </head>
 <body>
-  <header class="topo">
-    <h1 class="marca">Estante</h1>
-  </header>
   <main id="app" tabindex="-1"></main>
   <div id="anuncios" class="so-leitor" aria-live="polite"></div>
+
+  <input type="file" id="entrada-pdf" accept="application/pdf,.pdf" multiple hidden>
+
+  <dialog id="dlg-renomear" aria-labelledby="dlg-renomear-titulo">
+    <form method="dialog">
+      <h2 id="dlg-renomear-titulo">Renomear livro</h2>
+      <label class="campo">
+        <span>Nome do livro</span>
+        <input type="text" name="nome" required maxlength="200" autocomplete="off">
+      </label>
+      <div class="acoes-dialogo">
+        <button type="button" class="botao" value="cancelar" data-fechar>Cancelar</button>
+        <button type="submit" class="botao primario" value="salvar">Salvar nome</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-remover" aria-labelledby="dlg-remover-titulo" aria-describedby="dlg-remover-texto">
+    <form method="dialog">
+      <h2 id="dlg-remover-titulo">Remover da estante?</h2>
+      <p id="dlg-remover-texto"></p>
+      <div class="acoes-dialogo">
+        <button type="button" class="botao" value="cancelar" data-fechar>Cancelar</button>
+        <button type="submit" class="botao perigo" value="remover">Remover da estante</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

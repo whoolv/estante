@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4173/';
 export default defineConfig({
   testDir: 'tests/e2e',
-  timeout: 60_000,
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
   fullyParallel: true,
   reporter: [['list']],
   use: { baseURL: BASE_URL, trace: 'retain-on-failure' },

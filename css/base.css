@@ -31,3 +31,44 @@ main { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
 }
+
+/* Botões */
+.botao {
+  min-height: var(--toque); padding: 0 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--marrom); background: transparent; color: var(--creme);
+  font-size: .95rem; letter-spacing: .01em; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.botao:hover { border-color: var(--creme); }
+.botao.primario { background: var(--creme); color: var(--grafite); border-color: var(--creme); font-weight: 600; }
+.botao.primario:hover { background: #fff1cf; }
+.botao.perigo { background: #e9b9a6; color: var(--grafite); border-color: #e9b9a6; font-weight: 600; }
+.botao-icone {
+  min-width: var(--toque); min-height: var(--toque); border-radius: 999px; border: 0; background: transparent;
+  color: var(--creme); cursor: pointer; display: inline-grid; place-items: center; font-size: 1.15rem;
+}
+.botao-icone:hover { background: var(--marrom-escuro); }
+
+/* Campos */
+.campo { display: grid; gap: 6px; }
+.campo span { font-size: .9rem; color: var(--creme-suave); }
+input[type="text"], input[type="search"], input[type="number"] {
+  min-height: var(--toque); padding: 0 14px; border-radius: 12px; border: 1px solid var(--marrom);
+  background: var(--grafite-2); color: var(--creme); width: 100%;
+}
+input::placeholder { color: #a89a7c; }
+
+/* Diálogos */
+dialog {
+  border: 1px solid var(--marrom-escuro); border-radius: 18px; background: var(--grafite-2); color: var(--creme);
+  padding: 24px; width: min(440px, calc(100vw - 32px));
+}
+dialog::backdrop { background: rgba(10, 9, 8, .72); }
+dialog h2 { font-size: 1.35rem; margin-bottom: 14px; }
+dialog p { margin: 0 0 18px; color: var(--creme-suave); }
+.acoes-dialogo { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* Avisos */
+.avisos:empty { display: none; }
+.aviso { margin: 0 0 8px; padding: 12px 16px; border-radius: 12px; background: var(--marrom-escuro); color: var(--creme); }
+.aviso.erro { border-left: 4px solid #e9b9a6; }
