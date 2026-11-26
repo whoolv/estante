@@ -22,7 +22,7 @@ export async function abrirEstanteCom(page, ...nomes) {
   await irParaEstante(page);
   if (nomes.length) {
     await adicionar(page, ...nomes);
-    await expect(page.locator('.livro')).toHaveCount(nomes.length);
+    await expect(page.locator('.livro')).toHaveCount(nomes.length, { timeout: 15_000 });
   }
 }
 

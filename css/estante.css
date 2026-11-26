@@ -54,18 +54,22 @@ main.arrastando { outline: 2px dashed var(--marrom); outline-offset: -8px; }
 .capa {
   display: block; padding: 0; border: 0; background: none; cursor: pointer; max-width: 100%;
   border-radius: 2px 5px 5px 2px; position: relative; -webkit-touch-callout: none; user-select: none;
-  transition: transform .18s ease;
 }
 .capa img {
   max-height: 196px; width: auto; max-width: 100%; border-radius: 2px 5px 5px 2px;
   box-shadow: 6px 0 14px rgba(0, 0, 0, .5), inset 3px 0 0 rgba(0, 0, 0, .2);
+  transition: transform .18s ease;
 }
 .capa::before { /* lombada: sombra do vinco à esquerda */
   content: ""; position: absolute; inset: 0 auto 0 0; width: 9px; border-radius: 2px 0 0 2px;
   background: linear-gradient(90deg, rgba(0, 0, 0, .35), rgba(255, 255, 255, .08) 60%, transparent);
   pointer-events: none;
 }
-.capa:hover { transform: translateY(-6px); }
+/* Só a imagem sobe: a área clicável fica parada (sem tremer na borda) */
+@media (hover: hover) {
+  .capa:hover img, .capa:hover::before { transform: translateY(-6px); }
+}
+.capa::before { transition: transform .18s ease; z-index: 1; }
 .capa:focus-visible { outline-offset: 4px; }
 
 /* A tábua: face de cima clara + borda da frente escura; peças vizinhas formam uma tábua contínua */

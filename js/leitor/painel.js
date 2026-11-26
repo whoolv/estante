@@ -86,7 +86,8 @@ export async function instalarPainel(ctx) {
     const gaveta = estreita.matches;
     painel.classList.toggle('gaveta', gaveta);
     fundo.hidden = !gaveta;
-    if (gaveta) painel.setAttribute('aria-modal', 'true'); else painel.removeAttribute('aria-modal');
+    if (gaveta) { painel.setAttribute('role', 'dialog'); painel.setAttribute('aria-modal', 'true'); }
+    else { painel.removeAttribute('role'); painel.removeAttribute('aria-modal'); }
     pilhaEsc.empilhar(fecharPorEsc);
     abas[abaAtual].focus();
   }
