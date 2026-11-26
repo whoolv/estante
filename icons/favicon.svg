@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Estante</title>
+  <rect width="512" height="512" rx="112" fill="#141414"/>
+  <!-- sombra da folha -->
+  <path d="M164 108h170l70 70v262H164z" fill="#000" opacity=".35" transform="translate(10 10)"/>
+  <!-- folha de documento com canto dobrado -->
+  <path d="M152 96h170l70 70v262H152z" fill="#f2dfb7"/>
+  <!-- lombada de livro na lateral -->
+  <path d="M152 96h40v332h-40z" fill="#3a352c"/>
+  <path d="M192 96h6v332h-6z" fill="#8a7d63"/>
+  <!-- canto dobrado -->
+  <path d="M322 96v70h70z" fill="#8a7d63"/>
+  <path d="M322 166h70l-70-70z" fill="#c9b48c" opacity=".55"/>
+  <!-- fita marcadora -->
+  <path d="M238 96h34v112l-17-14-17 14z" fill="#8a7d63"/>
+  <!-- linhas de texto -->
+  <rect x="226" y="248" width="132" height="14" rx="7" fill="#8a7d63"/>
+  <rect x="226" y="282" width="110" height="14" rx="7" fill="#8a7d63" opacity=".8"/>
+  <rect x="226" y="316" width="132" height="14" rx="7" fill="#8a7d63" opacity=".8"/>
+  <rect x="226" y="350" width="84" height="14" rx="7" fill="#8a7d63" opacity=".6"/>
+</svg>

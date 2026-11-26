@@ -1,0 +1,16 @@
+{
+  "name": "Estante",
+  "short_name": "Estante",
+  "description": "Seus PDFs numa estante: continue de onde parou, com marcadores, sumário, busca e marca-texto.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141414",
+  "theme_color": "#141414",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icons/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

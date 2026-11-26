@@ -25,3 +25,7 @@ async function rotear() {
 
 window.addEventListener('hashchange', rotear);
 rotear();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+}
