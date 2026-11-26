@@ -1,3 +1,5 @@
+import { validarBackup, mesclar } from './backup.js';
+
 // Único módulo que conversa com o IndexedDB. O resto do app usa só estas funções,
 // para que uma futura sincronização (Google Drive) possa entrar aqui sem mexer nas telas.
 
@@ -197,7 +199,45 @@ export async function abrirRepositorio(nomeBanco = 'estante') {
       return { usado: usage, cota: quota };
     },
 
-    // Usados pelo backup (Task 4) e pelos testes.
+    /** Progresso, marcadores e marcas (sem PDFs nem capas). */
+    async exportarDados(agora = Date.now()) {
+      return transacao(db, ['livros', 'marcadores', 'marcas'], 'readonly', async (s) => ({
+        app: 'estante', versao: 1, exportadoEm: agora,
+        livros: (await pedido(s.livros.getAll())).map(({ id, titulo, pagina, posicao, ultimaLeitura }) => ({ id, titulo, pagina, posicao, ultimaLeitura })),
+        marcadores: await pedido(s.marcadores.getAll()),
+        marcas: await pedido(s.marcas.getAll()),
+      }));
+    },
+
+    /** Junta um backup com o que existe. Livros ausentes viram pendentes até o PDF ser adicionado. */
+    async importarDados(obj) {
+      validarBackup(obj);
+      return transacao(db, ['livros', 'pendentes', 'marcadores', 'marcas'], 'readwrite', async (s) => {
+        const naEstante = await pedido(s.livros.getAll());
+        const pendentes = await pedido(s.pendentes.getAll());
+        const atual = {
+          livros: [...naEstante, ...pendentes],
+          marcadores: await pedido(s.marcadores.getAll()),
+          marcas: await pedido(s.marcas.getAll()),
+        };
+        const { novos } = mesclar(atual, obj);
+        const ids = new Set(naEstante.map((l) => l.id));
+        for (const l of novos.livros) {
+          if (ids.has(l.id)) {
+            const livro = naEstante.find((x) => x.id === l.id);
+            Object.assign(livro, { pagina: Math.min(Math.max(1, l.pagina), livro.paginas), posicao: l.posicao, ultimaLeitura: l.ultimaLeitura });
+            s.livros.put(livro);
+          } else {
+            s.pendentes.put(l);
+          }
+        }
+        for (const m of novos.marcadores) s.marcadores.put(m);
+        for (const m of novos.marcas) s.marcas.put(m);
+        return { livros: novos.livros.length, marcadores: novos.marcadores.length, marcas: novos.marcas.length };
+      });
+    },
+
+    // Usados pelo backup e pelos testes.
     _gravarPendente(p) { return transacao(db, ['pendentes'], 'readwrite', (s) => { s.pendentes.put(p); }); },
     _lerPendente: (id) => ler('pendentes', id),
     _db: db,
