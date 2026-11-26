@@ -6,6 +6,7 @@ import { normalizarBusca } from '../util/texto.js';
 import { ErroLivroRepetido, ErroSemEspaco } from '../dados/repositorio.js';
 import { carregarPdf, lerInfo, gerarCapa, ErroNaoEPdf, ErroPdfComSenha } from '../pdf/pdf.js';
 import { abrirMenuLivro } from './menu-livro.js';
+import { validarBackup, ErroBackupInvalido } from '../dados/backup.js';
 
 const el = (tag, props = {}, ...filhos) => {
   const e = Object.assign(document.createElement(tag), props);
@@ -110,13 +111,23 @@ export async function mostrarEstante(main, repo) {
   const prateleira = el('section', { className: 'prateleira' }, tituloTodos, vazio, lista);
   prateleira.setAttribute('aria-labelledby', 'titulo-todos');
 
+  const espaco = el('p', { className: 'espaco' });
+  const botaoExportar = el('button', { type: 'button', className: 'botao', textContent: 'Exportar marcações' });
+  const botaoImportar = el('button', { type: 'button', className: 'botao', textContent: 'Importar marcações' });
+  const rodape = el('footer', { className: 'rodape-estante' },
+    espaco,
+    el('p', { className: 'explica-backup', textContent: 'O backup guarda onde você parou, os marcadores e o marca-texto. Os PDFs não entram nele.' }),
+    el('div', { className: 'acoes-backup' }, botaoExportar, botaoImportar));
+
   main.replaceChildren(
     el('header', { className: 'topo-estante' },
       el('h1', { className: 'marca', textContent: 'Estante' }),
       el('div', { className: 'acoes-topo' }, busca, botaoAdicionar)),
+    avisoIos(),
     avisos,
     areaContinuar,
     prateleira,
+    rodape,
   );
   main.dataset.tela = 'estante';
   delete main.dataset.pronta;
@@ -196,7 +207,14 @@ export async function mostrarEstante(main, repo) {
     if (anunciarResultado) anunciar(visiveis === 1 ? '1 livro' : `${visiveis} livros`);
   }
 
+  async function mostrarEspaco() {
+    const uso = await repo.espacoUsado().catch(() => null);
+    espaco.hidden = !uso;
+    if (uso) espaco.textContent = `Espaço usado: ${formatarTamanho(uso.usado)}`;
+  }
+
   async function desenhar() {
+    mostrarEspaco();
     livros = await repo.listarLivros();
     lista.replaceChildren(...(await Promise.all(livros.map(itemDoLivro))));
     vazio.hidden = livros.length > 0;
@@ -244,6 +262,42 @@ export async function mostrarEstante(main, repo) {
     anunciar(`“${livro.titulo}” foi removido.`);
   }
 
+  const entradaBackup = document.getElementById('entrada-backup');
+  botaoExportar.addEventListener('click', async () => {
+    const dados = await repo.exportarDados();
+    const hoje = new Date();
+    const data = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
+    const a = el('a', { href: url, download: `estante-marcacoes-${data}.json` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    anunciar('Marcações exportadas.');
+  });
+  botaoImportar.addEventListener('click', () => entradaBackup.click());
+  const aoEscolherBackup = async () => {
+    const arquivo = entradaBackup.files[0];
+    entradaBackup.value = '';
+    if (!arquivo) return;
+    let dados = null;
+    try { dados = JSON.parse(await arquivo.text()); } catch { /* inválido */ }
+    try {
+      validarBackup(dados); // avisa logo se o arquivo for outro, antes de perguntar
+    } catch {
+      avisos.replaceChildren(el('p', { className: 'aviso erro', textContent: new ErroBackupInvalido().message }));
+      return;
+    }
+    if ((await abrirDialogo(document.getElementById('dlg-importar'))) !== 'juntar') return;
+    const r = await repo.importarDados(dados);
+    await desenhar();
+    const n = (q, um, varios) => `${q} ${q === 1 ? um : varios}`;
+    const texto = `Importado: ${n(r.livros, 'livro', 'livros')}, ${n(r.marcadores, 'marcador', 'marcadores')}, ${n(r.marcas, 'trecho', 'trechos')}.`;
+    avisos.replaceChildren(el('p', { className: 'aviso', textContent: texto }));
+    anunciar(texto);
+  };
+  entradaBackup.addEventListener('change', aoEscolherBackup);
+
   botaoAdicionar.addEventListener('click', () => entrada.click());
   const aoEscolher = () => { const f = [...entrada.files]; entrada.value = ''; receber(f); };
   entrada.addEventListener('change', aoEscolher);
@@ -270,11 +324,40 @@ export async function mostrarEstante(main, repo) {
   return () => {
     delete main.dataset.pronta;
     entrada.removeEventListener('change', aoEscolher);
+    entradaBackup.removeEventListener('change', aoEscolherBackup);
     main.removeEventListener('dragover', aoArrastar);
     main.removeEventListener('dragleave', aoSair);
     main.removeEventListener('drop', aoSoltar);
     for (const url of urls.values()) if (url) URL.revokeObjectURL(url);
   };
+}
+
+function formatarTamanho(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes < 1024 ** 3) return `${Math.round(bytes / 1024 / 1024)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(1).replace('.', ',')} GB`;
+}
+
+const CHAVE_IOS = 'estante:aviso-ios-fechado';
+function ehIosNoNavegador() {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return ios && !navigator.standalone;
+}
+
+/** No iPhone/iPad fora do app instalado, o Safari pode apagar os dados: orienta a instalar. */
+function avisoIos() {
+  if (!ehIosNoNavegador()) return '';
+  try { if (localStorage.getItem(CHAVE_IOS)) return ''; } catch { /* sem armazenamento: mostra */ }
+  const fechar = el('button', { type: 'button', className: 'botao-icone', textContent: '×' });
+  fechar.setAttribute('aria-label', 'Fechar aviso');
+  const faixa = el('div', { className: 'aviso aviso-ios' },
+    el('p', { textContent: 'No iPhone e iPad, instale a Estante na tela de início (Compartilhar, depois Adicionar à Tela de Início) para o Safari não apagar seus livros.' }),
+    fechar);
+  fechar.addEventListener('click', () => {
+    faixa.remove();
+    try { localStorage.setItem(CHAVE_IOS, '1'); } catch { /* ignora */ }
+  });
+  return faixa;
 }
 
 /** Abre um <dialog> com formulário e resolve com o `value` do botão usado. */

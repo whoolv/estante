@@ -15,6 +15,7 @@
   <div id="anuncios" class="so-leitor" aria-live="polite"></div>
 
   <input type="file" id="entrada-pdf" accept="application/pdf,.pdf" multiple hidden>
+  <input type="file" id="entrada-backup" accept="application/json,.json" hidden>
 
   <dialog id="dlg-renomear" aria-labelledby="dlg-renomear-titulo">
     <form method="dialog">
@@ -37,6 +38,17 @@
       <div class="acoes-dialogo">
         <button type="button" class="botao" value="cancelar" data-fechar>Cancelar</button>
         <button type="submit" class="botao perigo" value="remover">Remover da estante</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-importar" aria-labelledby="dlg-importar-titulo">
+    <form method="dialog">
+      <h2 id="dlg-importar-titulo">Importar marcações</h2>
+      <p>Juntar as marcações deste arquivo com as atuais? Nada do que você já tem é apagado.</p>
+      <div class="acoes-dialogo">
+        <button type="button" class="botao" value="cancelar" data-fechar>Cancelar</button>
+        <button type="submit" class="botao primario" value="juntar">Juntar marcações</button>
       </div>
     </form>
   </dialog>
