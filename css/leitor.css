@@ -101,3 +101,19 @@ main[data-tela="leitor"] { height: 100vh; height: 100dvh; overflow: hidden; }
   position: fixed; z-index: 31; top: 0; bottom: 0; left: 0; width: min(88vw, 340px);
   box-shadow: 12px 0 30px rgba(0, 0, 0, .6);
 }
+
+/* Busca */
+.barra-busca {
+  flex: none; display: flex; align-items: center; gap: 4px; padding: 6px 10px;
+  border-bottom: 1px solid var(--marrom-escuro); background: var(--grafite-2);
+}
+.barra-busca[hidden] { display: none; }
+.campo-busca { flex: 1 1 200px; max-width: 420px; }
+.contador-busca { min-width: 7em; padding: 0 8px; color: var(--creme-suave); font-size: .9rem; white-space: nowrap; }
+.textLayer mark.achado { color: transparent; background: rgba(242, 190, 60, .45); border-radius: 2px; }
+.textLayer mark.achado-atual { background: rgba(230, 120, 30, .6); box-shadow: 0 0 0 2px rgba(230, 120, 30, .9); }
+@media (max-width: 599px) {
+  .barra-busca { flex-wrap: wrap; }
+  .campo-busca { flex-basis: 100%; max-width: none; }
+  .contador-busca { flex: 1; }
+}

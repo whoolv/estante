@@ -5,6 +5,7 @@ import { avisarNaEstante } from '../estante/tela-estante.js';
 
 import { el, icone, ICONES } from './icones.js';
 import { instalarPainel } from './painel.js';
+import { instalarBusca } from './busca.js';
 import { anunciar } from '../estante/tela-estante.js';
 
 
@@ -178,4 +179,4 @@ export async function mostrarLeitor(main, repo, id) {
 }
 
 /** Partes do leitor, instaladas em ordem (o marca-texto usa o painel). */
-const extensoes = [instalarPainel];
+const extensoes = [instalarPainel, instalarBusca];
