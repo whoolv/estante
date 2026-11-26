@@ -63,3 +63,41 @@ main[data-tela="leitor"] { height: 100vh; height: 100dvh; overflow: hidden; }
   .ferramentas { order: 1; margin-left: auto; }
   .paginas { padding: 10px 6px; }
 }
+
+/* Painel lateral */
+.lateral { flex: none; display: flex; }
+.painel {
+  width: 300px; display: flex; flex-direction: column; min-height: 0; height: 100%;
+  background: var(--grafite-2); border-right: 1px solid var(--marrom-escuro);
+}
+.painel[hidden] { display: none; }
+.cabeca-painel { display: flex; align-items: center; gap: 4px; padding: 6px 6px 0 8px; border-bottom: 1px solid var(--marrom-escuro); }
+.abas { display: flex; flex: 1; min-width: 0; }
+.aba {
+  flex: 1; min-height: var(--toque); border: 0; background: none; color: var(--creme-suave); cursor: pointer;
+  font-size: .9rem; padding: 0 6px; border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.aba[aria-selected="true"] { color: var(--creme); border-bottom-color: var(--creme); }
+.conteudo-aba { flex: 1; overflow: auto; padding: 10px 8px 24px; overscroll-behavior: contain; }
+.conteudo-aba[hidden] { display: none; }
+.nota { margin: 6px 8px 12px; color: var(--creme-suave); font-size: .9rem; }
+.conteudo-aba ul { list-style: none; margin: 0; padding: 0; }
+.item-lista {
+  width: 100%; min-height: var(--toque); text-align: left; border: 0; border-radius: 10px; background: none;
+  color: var(--creme); cursor: pointer; padding: 8px 10px 8px calc(10px + var(--nivel, 0) * 14px); font-size: .93rem;
+}
+.item-lista:hover { background: var(--marrom-escuro); }
+.item-lista[aria-current] { background: var(--marrom-escuro); box-shadow: inset 3px 0 0 var(--creme); }
+.linha-lista { display: flex; align-items: center; gap: 2px; }
+.item-marcador { display: grid; gap: 2px; }
+.item-pagina { font-family: var(--serif); }
+.item-detalhe { color: var(--creme-suave); font-size: .88rem; overflow-wrap: anywhere; }
+.trecho { font-style: italic; }
+.novo-marcador { display: grid; gap: 8px; margin: 4px 4px 14px; }
+.marcar-rapido[aria-pressed="true"] svg path { fill: currentColor; }
+.fundo-gaveta { position: fixed; inset: 0; z-index: 30; background: rgba(10, 9, 8, .6); }
+.fundo-gaveta[hidden] { display: none; }
+.painel.gaveta {
+  position: fixed; z-index: 31; top: 0; bottom: 0; left: 0; width: min(88vw, 340px);
+  box-shadow: 12px 0 30px rgba(0, 0, 0, .6);
+}
