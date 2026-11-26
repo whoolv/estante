@@ -1,6 +1,6 @@
 // Service worker da Estante: guarda o app no aparelho para abrir sem internet.
 // Os livros não passam por aqui (ficam no IndexedDB).
-const VERSAO = 'estante-v1';
+const VERSAO = 'estante-1f225d623079';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -21,6 +21,7 @@ const ARQUIVOS = [
   'js/leitor/painel.js',
   'js/leitor/tela-leitor.js',
   'js/pdf/pdf.js',
+  'js/util/canvas.js',
   'js/util/hash.js',
   'js/util/livro.js',
   'js/util/retangulos.js',
@@ -36,7 +37,9 @@ const ARQUIVOS = [
 ];
 
 self.addEventListener('install', (ev) => {
-  ev.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));
+  // Baixa o conjunto inteiro direto do servidor (sem o cache do navegador), para nunca misturar versões.
+  // A versão nova só entra quando o app é fechado e aberto de novo.
+  ev.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS.map((a) => new Request(a, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (ev) => {
@@ -46,21 +49,19 @@ self.addEventListener('activate', (ev) => {
   })());
 });
 
-// Responde do cache na hora e atualiza o cache em segundo plano quando há internet.
+// Responde com os arquivos desta versão; só vai à rede o que não faz parte do app.
 self.addEventListener('fetch', (ev) => {
   const req = ev.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   const navegacao = req.mode === 'navigate';
   ev.respondWith((async () => {
     const cache = await caches.open(VERSAO);
-    const chave = navegacao ? 'index.html' : req;
-    const guardado = await cache.match(chave, { ignoreSearch: navegacao });
-    const daRede = fetch(req).then((resp) => {
-      if (resp.ok && !navegacao && ARQUIVOS.some((a) => req.url.endsWith(`/${a}`))) cache.put(req, resp.clone());
-      if (resp.ok && navegacao) cache.put('index.html', resp.clone());
-      return resp;
-    }).catch(() => null);
-    if (guardado) { ev.waitUntil(daRede); return guardado; }
-    return (await daRede) ?? new Response('Sem conexão.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    const guardado = await cache.match(navegacao ? 'index.html' : req, { ignoreSearch: navegacao });
+    if (guardado) return guardado;
+    try {
+      return await fetch(req);
+    } catch {
+      return new Response('Sem conexão.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
   })());
 });

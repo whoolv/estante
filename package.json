@@ -11,7 +11,8 @@
     "vendor": "node scripts/copiar-vendor.mjs",
     "fixtures": "node scripts/gerar-pdfs-teste.mjs",
     "icones": "node scripts/gerar-icones.mjs",
-    "servir": "http-server . -p 4173 -c-1 -s"
+    "servir": "http-server . -p 4173 -c-1 -s",
+    "versao-sw": "node scripts/versao-sw.mjs"
   },
   "author": "Jordana de Oliveira",
   "license": "MIT",

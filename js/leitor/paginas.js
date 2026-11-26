@@ -1,5 +1,6 @@
 // Mostra as páginas do PDF em rolagem contínua, renderizando só as que estão perto da tela.
 import { pdfjs } from '../pdf/pdf.js';
+import { densidadeDoCanvas } from '../util/canvas.js';
 
 const MARGEM = 16;          // espaço lateral dentro da área de rolagem
 const ESPACO = 14;          // espaço entre páginas (px)
@@ -57,6 +58,8 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
     r.tarefa?.cancel();
     r.camadaTexto?.cancel?.();
     renderizadas.delete(n);
+    // zera o canvas antes de tirar da página: o Safari só devolve a memória assim
+    for (const c of elementos[n - 1].querySelectorAll('canvas')) { c.width = 0; c.height = 0; }
     elementos[n - 1].replaceChildren();
     delete elementos[n - 1].dataset.renderizada;
   }
@@ -76,7 +79,7 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina } = {}) 
         div.style.height = `${Math.round(larguraPagina() * prop)}px`;
       }
       const viewport = pagina.getViewport({ scale: escala() * (v1.width ? base.width / v1.width : 1) });
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = densidadeDoCanvas(viewport.width, viewport.height, window.devicePixelRatio);
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);

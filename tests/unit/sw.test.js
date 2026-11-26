@@ -22,3 +22,22 @@ describe('service worker', () => {
     expect(lista.some((a) => a.startsWith('tests/') || a.endsWith('.pdf'))).toBe(false);
   });
 });
+
+import { versaoDosArquivos } from '../../scripts/versao-sw.mjs';
+
+describe('atualização do service worker', () => {
+  it('a versão do cache muda sempre que um arquivo do app muda', () => {
+    const versao = fonte.match(/const VERSAO = '([^']+)'/)[1];
+    expect(versao, 'rode: npm run versao-sw').toBe(versaoDosArquivos(lista));
+  });
+  it('baixa os arquivos sem passar pelo cache do navegador', () => {
+    expect(fonte).toMatch(/cache: 'reload'/);
+  });
+  it('não troca arquivos soltos no cache durante o uso', () => {
+    expect(fonte).not.toMatch(/cache\.put/);
+  });
+  it('versaoDosArquivos depende do conteúdo', () => {
+    expect(versaoDosArquivos(['index.html'])).toMatch(/^estante-[0-9a-f]{12}$/);
+    expect(versaoDosArquivos(['index.html'])).not.toBe(versaoDosArquivos(['index.html', 'css/base.css']));
+  });
+});

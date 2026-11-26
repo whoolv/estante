@@ -70,6 +70,15 @@ describe('exportar e importar', () => {
     expect(await repo.obterLivro('A')).toMatchObject({ pagina: 20, titulo: 'Livro A' });
   });
 
+  it('exportar inclui o progresso de livros que ainda não voltaram para a estante', async () => {
+    const repo = await novoRepo();
+    await repo.adicionarLivro(livro('A'));
+    await repo.importarDados({ app: 'estante', versao: 1, exportadoEm: 1, livros: [{ id: 'P', titulo: 'Pendente', pagina: 77, posicao: 0.5, ultimaLeitura: 900 }], marcadores: [], marcas: [] });
+    const dados = await repo.exportarDados(5);
+    expect(dados.livros.map((l) => l.id).sort()).toEqual(['A', 'P']);
+    expect(dados.livros.find((l) => l.id === 'P')).toEqual({ id: 'P', titulo: 'Pendente', pagina: 77, posicao: 0.5, ultimaLeitura: 900 });
+  });
+
   it('importar arquivo inválido lança', async () => {
     const repo = await novoRepo();
     await expect(repo.importarDados({ foo: 1 })).rejects.toBeInstanceOf(ErroBackupInvalido);

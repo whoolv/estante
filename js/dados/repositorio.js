@@ -222,9 +222,9 @@ export async function abrirRepositorio(nomeBanco = 'estante') {
 
     /** Progresso, marcadores e marcas (sem PDFs nem capas). */
     async exportarDados(agora = Date.now()) {
-      return transacao(db, ['livros', 'marcadores', 'marcas'], 'readonly', async (s) => ({
+      return transacao(db, ['livros', 'pendentes', 'marcadores', 'marcas'], 'readonly', async (s) => ({
         app: 'estante', versao: 1, exportadoEm: agora,
-        livros: (await pedido(s.livros.getAll())).map(({ id, titulo, pagina, posicao, ultimaLeitura }) => ({ id, titulo, pagina, posicao, ultimaLeitura })),
+        livros: [...await pedido(s.livros.getAll()), ...await pedido(s.pendentes.getAll())].map(({ id, titulo, pagina, posicao, ultimaLeitura }) => ({ id, titulo, pagina, posicao, ultimaLeitura })),
         marcadores: await pedido(s.marcadores.getAll()),
         marcas: await pedido(s.marcas.getAll()),
       }));

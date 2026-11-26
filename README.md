@@ -53,6 +53,7 @@ npm test                # testes de lógica
 npm run e2e             # testes de tela (usa o Microsoft Edge instalado)
 npm run fixtures        # gera de novo os PDFs de teste
 npm run icones          # gera os ícones a partir de icons/icone.svg
+npm run versao-sw       # rode depois de mudar o app, para os aparelhos baixarem a versão nova
 ```
 
 ## No notebook, como programa
