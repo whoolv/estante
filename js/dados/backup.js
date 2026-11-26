@@ -7,10 +7,29 @@ export class ErroBackupInvalido extends Error {
   }
 }
 
+const ehId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 128;
+const ehPagina = (v) => Number.isInteger(v) && v >= 1;
+const ehNumero = (v) => typeof v === 'number' && Number.isFinite(v);
+const ehTexto = (v) => typeof v === 'string';
+const ehRetangulo = (r) => r && ['x', 'y', 'w', 'h'].every((k) => ehNumero(r[k]));
+
+const livroOk = (l) => l && ehId(l.id) && ehTexto(l.titulo) && ehPagina(l.pagina)
+  && (l.posicao == null || ehNumero(l.posicao)) && (l.ultimaLeitura == null || ehNumero(l.ultimaLeitura));
+const marcadorOk = (m) => m && ehTexto(m.id) && ehId(m.livroId) && ehPagina(m.pagina) && (m.nome == null || ehTexto(m.nome));
+const marcaOk = (m) => m && ehTexto(m.id) && ehId(m.livroId) && ehPagina(m.pagina) && ehTexto(m.texto)
+  && Array.isArray(m.rects) && m.rects.length > 0 && m.rects.every(ehRetangulo);
+
+/** Confere o formato do backup e devolve uma cópia só com os itens válidos (itens estragados são ignorados). */
 export function validarBackup(obj) {
   const ok = obj && typeof obj === 'object' && obj.app === 'estante' && obj.versao === 1
     && Array.isArray(obj.livros) && Array.isArray(obj.marcadores) && Array.isArray(obj.marcas);
   if (!ok) throw new ErroBackupInvalido();
+  return {
+    ...obj,
+    livros: obj.livros.filter(livroOk),
+    marcadores: obj.marcadores.filter(marcadorOk),
+    marcas: obj.marcas.filter(marcaOk),
+  };
 }
 
 const chaveMarcador = (m) => `${m.livroId}|${m.pagina}|${m.nome ?? ''}`;

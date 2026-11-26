@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { lerPreferencias, salvarPreferencias, PADRAO } from '../../js/util/preferencias.js';
 import { limparTituloSumario, achatarSumario } from '../../js/util/texto.js';
-import { tituloInicial, tituloPareceArquivo } from '../../js/util/livro.js';
+import { tituloInicial, tituloPareceArquivo, tituloCorrigido } from '../../js/util/livro.js';
+import { limiteDePixels, MAX_PIXELS_CANVAS } from '../../js/util/canvas.js';
 import { comoInstalar } from '../../js/util/instalar.js';
 
 const memoria = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) }; };
@@ -75,5 +76,54 @@ describe('como instalar', () => {
   it('computador sem convite: nada (o navegador mostra o ícone na barra)', () => {
     expect(comoInstalar({ ...base, ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130', plataforma: 'Win32', toques: 0 })).toBe(null);
     expect(comoInstalar({ ...base, ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130', plataforma: 'Win32', toques: 0, temPrompt: true })).toBe('prompt');
+  });
+});
+
+describe('revisão: sumário não estraga títulos de verdade', () => {
+  it('mantém títulos que misturam escritas', () => {
+    expect(limparTituloSumario('Chapter 1 はじめに')).toBe('Chapter 1 はじめに');
+    expect(limparTituloSumario('TCP/IP 协议')).toBe('TCP/IP 协议');
+    expect(limparTituloSumario('Python 프로그래밍')).toBe('Python 프로그래밍');
+  });
+  it('mantém listas com parêntese', () => {
+    expect(limparTituloSumario('a) Introdução')).toBe('a) Introdução');
+    expect(limparTituloSumario('1) Conceitos')).toBe('1) Conceitos');
+    expect(limparTituloSumario('Intervalo [0, 1)')).toBe('Intervalo [0, 1)');
+  });
+});
+
+describe('revisão: correção de títulos de arquivo', () => {
+  it('usa o nome do arquivo quando ele diz algo', () => {
+    expect(tituloCorrigido('Kurose_menor.indb', 'Redes de Computadores - Kurose.pdf')).toBe('Redes de Computadores Kurose');
+  });
+  it('com nome de arquivo genérico, só tira a extensão do título antigo', () => {
+    expect(tituloCorrigido('Kurose_menor.indb', 'download (3).pdf')).toBe('Kurose menor');
+    expect(tituloCorrigido('Kurose_menor.indb', '3f9a0c1d2e4b5a6f7c8d.pdf')).toBe('Kurose menor');
+  });
+  it('não mexe em título que não parece arquivo', () => {
+    expect(tituloCorrigido('It: A coisa', 'it.pdf')).toBe(null);
+  });
+});
+
+describe('revisão: limite de pixels', () => {
+  it('iPhone e iPad usam o limite menor; os outros, um maior', () => {
+    expect(limiteDePixels({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', plataforma: 'iPhone', toques: 5 })).toBe(MAX_PIXELS_CANVAS);
+    expect(limiteDePixels({ ua: 'Mozilla/5.0 (Macintosh)', plataforma: 'MacIntel', toques: 5 })).toBe(MAX_PIXELS_CANVAS);
+    expect(limiteDePixels({ ua: 'Mozilla/5.0 (Windows NT 10.0)', plataforma: 'Win32', toques: 0 })).toBe(2 ** 24);
+    expect(limiteDePixels({ ua: 'Mozilla/5.0 (Linux; Android 14)', plataforma: 'Linux', toques: 5 })).toBe(2 ** 24);
+  });
+});
+
+describe('revisão: instalar', () => {
+  const base = { ua: 'Mozilla/5.0 (Linux; Android 14) Chrome/130', plataforma: 'Linux', toques: 5, standalone: false, instalado: false, temPrompt: false, janelaNotebook: false };
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15';
+  it('o convite do navegador vale mesmo com a marca de já instalado (app foi desinstalado)', () => {
+    expect(comoInstalar({ ...base, instalado: true, temPrompt: true })).toBe('prompt');
+  });
+  it('Chrome ou Firefox no iPhone têm outro caminho; navegador de app manda abrir no Safari', () => {
+    expect(comoInstalar({ ...base, ua: `${iphone} CriOS/130 Mobile Safari` })).toBe('ios-outro');
+    expect(comoInstalar({ ...base, ua: `${iphone} FxiOS/130 Mobile Safari` })).toBe('ios-outro');
+    expect(comoInstalar({ ...base, ua: `${iphone} Mobile Instagram 300.0` })).toBe('abrir-no-navegador');
+    expect(comoInstalar({ ...base, ua: `${iphone} Version/18.0 Mobile Safari/604.1` })).toBe('ios');
   });
 });

@@ -24,7 +24,7 @@ function grupo(legenda, nome, itens, atual, classe, conteudo) {
 }
 
 export function instalarOpcoes(ctx) {
-  const { raiz, barra, ferramentas, visualizador, pilhaEsc, anunciar } = ctx;
+  const { raiz, ferramentas, visualizador, pilhaEsc, anunciar } = ctx;
   let prefs = lerPreferencias();
 
   const botao = el('button', { type: 'button', className: 'botao-icone botao-aa', textContent: 'Aa' });
@@ -42,8 +42,7 @@ export function instalarOpcoes(ctx) {
   caixa.setAttribute('role', 'dialog');
   caixa.setAttribute('aria-label', 'Opções de leitura');
 
-  ferramentas.append(botao);
-  barra.append(caixa);
+  ferramentas.append(botao, caixa); // logo depois do botão: o Tab passa por ela na ordem certa
 
   const fechar = (devolverFoco = true) => {
     if (caixa.hidden) return;
@@ -64,6 +63,12 @@ export function instalarOpcoes(ctx) {
     caixa.querySelector('input:checked')?.focus();
   };
   botao.addEventListener('click', () => (caixa.hidden ? abrir() : fechar()));
+  const aoSairFoco = (ev) => {
+    const destino = ev.relatedTarget;
+    if (destino instanceof Node && (caixa.contains(destino) || botao.contains(destino))) return;
+    if (destino) fechar(false);
+  };
+  caixa.addEventListener('focusout', aoSairFoco);
 
   caixa.addEventListener('change', (ev) => {
     const alvo = ev.target;

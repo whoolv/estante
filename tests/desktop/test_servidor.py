@@ -139,3 +139,47 @@ def test_sw_no_notebook_limpa_a_copia_guardada():
         assert "ARQUIVOS" not in texto
     finally:
         srv.shutdown()
+
+
+def test_so_entrega_arquivos_do_app():
+    porta = porta_livre()
+    srv = subir(porta)
+    try:
+        for caminho in ("/", "/index.html", "/js/app.js", "/css/base.css", "/vendor/pdfjs/pdf.min.mjs", "/icons/favicon.svg", "/manifest.webmanifest"):
+            assert pedir(porta, caminho)[0] == 200, caminho
+        for caminho in ("/.git/config", "/package.json", "/README.md", "/desktop/servidor.py", "/tests/fixtures/livro-teste.pdf", "/node_modules/.package-lock.json", "/.superpowers/x"):
+            assert pedir(porta, caminho)[0] == 404, caminho
+    finally:
+        srv.shutdown()
+
+
+def test_porta_ocupada_por_outro_programa_da_erro():
+    porta = porta_livre()
+    outro = socket.socket()
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+        outro.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    outro.bind(("127.0.0.1", porta))
+    outro.listen(1)
+    try:
+        try:
+            srv = servidor.iniciar_servidor(RAIZ, porta)
+        except OSError:
+            return
+        srv.shutdown()
+        raise AssertionError("subiu numa porta já ocupada")
+    finally:
+        outro.close()
+
+
+def test_segunda_estante_na_mesma_porta_da_erro():
+    porta = porta_livre()
+    srv = subir(porta)
+    try:
+        try:
+            outro = servidor.iniciar_servidor(RAIZ, porta)
+        except OSError:
+            return
+        outro.shutdown()
+        raise AssertionError("duas Estantes na mesma porta")
+    finally:
+        srv.shutdown()

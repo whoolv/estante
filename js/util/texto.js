@@ -12,22 +12,18 @@ export function normalizarBusca(s) {
   return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-const ESTRANHOS = /[\u0000-\u001f\u007f�-□]/g;
-const CJK = /[⺀-⿿぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/g;
-const LATINO = /[A-Za-zÀ-ÿ]/;
+// Sinais de texto embaralhado: caractere de substituição, área de uso privado e o quadrado "□".
+const LIXO = '\\ufffd\\ue000-\\uf8ff\\u25a1';
+const CJK = '\\u2e80-\\u2fff\\u3040-\\u30ff\\u3400-\\u4dbf\\u4e00-\\u9fff\\uac00-\\ud7af\\uf900-\\ufaff';
+// Um sinal de lixo e o que vem grudado nele (ideogramas soltos, espaços e parênteses), até o fim do trecho.
+const TRECHO_EMBARALHADO = new RegExp(`\\s*[${LIXO}][${LIXO}${CJK}\\s()]*`, 'g');
+const CONTROLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
 
-/** Limpa títulos do sumário com caracteres embaralhados (defeito comum em PDFs). */
+/**
+ * Limpa títulos do sumário com caracteres embaralhados (defeito comum em PDFs).
+ * Só mexe onde há sinal de lixo: títulos de verdade em qualquer escrita ficam como estão.
+ */
 export function limparTituloSumario(titulo) {
-  let s = String(titulo ?? '').replace(ESTRANHOS, ' ');
-  if (LATINO.test(s)) s = s.replace(CJK, ' ');
-  // tira parênteses que sobraram sem par
-  let profundidade = 0;
-  let saida = '';
-  for (const c of s) {
-    if (c === '(') profundidade++;
-    if (c === ')') { if (profundidade === 0) continue; profundidade--; }
-    saida += c;
-  }
-  while (profundidade-- > 0) saida = saida.replace(/\((?![^(]*\))/, ' ');
-  return saida.replace(/\s+/g, ' ').trim();
+  const s = String(titulo ?? '').replace(CONTROLE, ' ').replace(TRECHO_EMBARALHADO, ' ');
+  return s.replace(/\s+/g, ' ').trim();
 }

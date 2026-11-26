@@ -42,6 +42,19 @@ for (let i = 0; i < 2; i++) {
 }
 await salvar('so-imagem.pdf', imagem);
 
+// Capa mais larga que as páginas de dentro (comum em livros escaneados)
+const tamanhos = await PDFDocument.create();
+tamanhos.setTitle('Tamanhos Variados');
+const fonteT = await tamanhos.embedFont(StandardFonts.Helvetica);
+for (let i = 1; i <= 6; i++) {
+  const [w, h] = i === 1 ? [500, 595] : [420, 595];
+  const p = tamanhos.addPage([w, h]);
+  p.drawRectangle({ x: 0, y: 0, width: w, height: h, color: rgb(1, 1, 1) });
+  p.drawText(`Folha ${i}`, { x: 40, y: 530, size: 20, font: fonteT, color: rgb(0.1, 0.1, 0.1) });
+  p.drawText('Rodapé da folha', { x: 40, y: 20, size: 12, font: fonteT, color: rgb(0.1, 0.1, 0.1) });
+}
+await salvar('tamanhos.pdf', tamanhos);
+
 // PNG 1×1 com extensão .pdf
 writeFileSync('tests/fixtures/nao-e-pdf.pdf', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
 console.log('PDFs de teste gerados em tests/fixtures');

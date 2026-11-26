@@ -125,13 +125,15 @@ export async function abrirRepositorio(nomeBanco = 'estante') {
     async obterArquivo(id) { return (await ler('arquivos', id))?.blob ?? null; },
     async obterCapa(id) { return (await ler('capas', id))?.blob ?? null; },
 
-    async renomearLivro(id, titulo) {
+    /** Renomeia. `automatico` = correção do app (não marca o nome como escolhido pela pessoa). */
+    async renomearLivro(id, titulo, { automatico = false } = {}) {
       const limpo = String(titulo ?? '').trim();
       if (!limpo) throw new TypeError('O nome não pode ficar vazio.');
       return transacao(db, ['livros'], 'readwrite', async (s) => {
         const livro = await pedido(s.livros.get(id));
         if (!livro) throw new Error('Livro não encontrado.');
         livro.titulo = limpo;
+        if (!automatico) livro.tituloManual = true;
         s.livros.put(livro);
         return livro;
       });
@@ -231,8 +233,8 @@ export async function abrirRepositorio(nomeBanco = 'estante') {
     },
 
     /** Junta um backup com o que existe. Livros ausentes viram pendentes até o PDF ser adicionado. */
-    async importarDados(obj) {
-      validarBackup(obj);
+    async importarDados(bruto) {
+      const obj = validarBackup(bruto);
       return transacao(db, ['livros', 'pendentes', 'marcadores', 'marcas'], 'readwrite', async (s) => {
         const naEstante = await pedido(s.livros.getAll());
         const pendentes = await pedido(s.pendentes.getAll());

@@ -1,6 +1,6 @@
 // Mostra as páginas do PDF em rolagem contínua ou uma por vez (modo página), renderizando só as que estão perto da tela.
 import { pdfjs } from '../pdf/pdf.js';
-import { densidadeDoCanvas } from '../util/canvas.js';
+import { densidadeDoCanvas, limiteDePixels } from '../util/canvas.js';
 
 const MARGEM = 16;          // espaço lateral dentro da área de rolagem
 const ESPACO = 14;          // espaço entre páginas (px)
@@ -26,6 +26,7 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
   let modo = modoInicial;     // 'rolagem' ou 'pagina'
   const emPagina = () => modo === 'pagina';
   const reduzirMovimento = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const limitePixels = limiteDePixels({ ua: navigator.userAgent, plataforma: navigator.platform, toques: navigator.maxTouchPoints || 0 });
   let atual = { pagina: 1, posicao: 0 };
   const renderizadas = new Map(); // n -> {tarefa, camada}
 
@@ -36,31 +37,40 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
     const div = document.createElement('div');
     div.className = 'pagina';
     div.dataset.pagina = String(n);
-    div.setAttribute('role', 'region');
+    div.setAttribute('role', 'group');
     div.setAttribute('aria-label', `Página ${n}`);
     trilho.append(div);
     elementos.push(div);
   }
   container.replaceChildren(trilho);
 
-  const larguraAjustada = () => {
-    if (!emPagina()) return Math.max(200, Math.min(container.clientWidth - MARGEM * 2, LARGURA_MAX));
-    // modo página: a página inteira cabe na tela
-    const porAltura = (container.clientHeight - MARGEM * 2) / proporcaoPadrao;
-    return Math.max(120, Math.min(container.clientWidth - MARGEM * 2, porAltura));
+  const proporcaoDe = (n) => proporcoes.get(n) ?? proporcaoPadrao;
+  // Rolagem: todas as páginas com a mesma largura ("ajustar à largura").
+  const larguraRolagem = () => Math.round(Math.max(200, Math.min(container.clientWidth - MARGEM * 2, LARGURA_MAX)) * zoom);
+  // Modo página: cada página cabe inteira na tela, conforme o formato dela.
+  const larguraDe = (n) => {
+    if (!emPagina()) return larguraRolagem();
+    const porAltura = (container.clientHeight - MARGEM * 2) / proporcaoDe(n);
+    return Math.round(Math.max(120, Math.min(container.clientWidth - MARGEM * 2, porAltura)) * zoom);
   };
-  const folga = () => (emPagina() ? Math.max(0, (container.clientWidth - larguraPagina()) / 2) : 0);
-  const larguraPagina = () => Math.round(larguraAjustada() * zoom);
-  const escala = () => larguraPagina() / base.width;
+  const folgaDe = (n) => (emPagina() ? Math.max(0, (container.clientWidth - larguraDe(n)) / 2) : 0);
+
+  function ajustarElemento(n) {
+    const el = elementos[n - 1];
+    const w = larguraDe(n);
+    el.style.height = `${Math.round(w * proporcaoDe(n))}px`;
+    if (emPagina()) {
+      el.style.width = `${w}px`;
+      el.style.marginLeft = el.style.marginRight = `${folgaDe(n)}px`;
+    } else {
+      el.style.width = el.style.marginLeft = el.style.marginRight = '';
+    }
+  }
 
   function dimensionar() {
-    const w = larguraPagina();
-    trilho.style.setProperty('--largura', `${w}px`);
-    trilho.style.setProperty('--folga', `${folga()}px`);
+    trilho.style.setProperty('--largura', `${larguraRolagem()}px`);
     container.classList.toggle('modo-pagina', emPagina());
-    for (let n = 1; n <= total; n++) {
-      elementos[n - 1].style.height = `${Math.round(w * (proporcoes.get(n) ?? proporcaoPadrao))}px`;
-    }
+    for (let n = 1; n <= total; n++) ajustarElemento(n);
   }
 
   function liberar(n) {
@@ -71,6 +81,7 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
     renderizadas.delete(n);
     // zera o canvas antes de tirar da página: o Safari só devolve a memória assim
     for (const c of elementos[n - 1].querySelectorAll('canvas')) { c.width = 0; c.height = 0; }
+    r.pagina?.cleanup(); // devolve a memória que o PDF.js guarda da página
     elementos[n - 1].replaceChildren();
     delete elementos[n - 1].dataset.renderizada;
   }
@@ -82,15 +93,16 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
     const div = elementos[n - 1];
     try {
       const pagina = await pdf.getPage(n);
-      if (renderizadas.get(n) !== registro) return;
+      registro.pagina = pagina;
+      if (renderizadas.get(n) !== registro) { pagina.cleanup(); return; }
       const v1 = pagina.getViewport({ scale: 1 });
       const prop = v1.height / v1.width;
       if (prop !== proporcoes.get(n)) {
         proporcoes.set(n, prop);
-        div.style.height = `${Math.round(larguraPagina() * prop)}px`;
+        ajustarElemento(n);
       }
-      const viewport = pagina.getViewport({ scale: escala() * (v1.width ? base.width / v1.width : 1) });
-      const dpr = densidadeDoCanvas(viewport.width, viewport.height, window.devicePixelRatio);
+      const viewport = pagina.getViewport({ scale: larguraDe(n) / (v1.width || base.width) });
+      const dpr = densidadeDoCanvas(viewport.width, viewport.height, window.devicePixelRatio, limitePixels);
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
@@ -128,7 +140,7 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
       let hi = total - 1;
       while (lo < hi) {
         const meio = (lo + hi + 1) >> 1;
-        if (elementos[meio].offsetLeft - folga() <= meioTela) lo = meio; else hi = meio - 1;
+        if (elementos[meio].offsetLeft - folgaDe(meio + 1) <= meioTela) lo = meio; else hi = meio - 1;
       }
       return { pagina: lo + 1, posicao: 0 };
     }
@@ -167,13 +179,13 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
     const n = Math.min(Math.max(1, Math.round(pagina) || 1), total);
     const el = elementos[n - 1];
     if (emPagina()) {
-      const esquerda = el.offsetLeft - folga();
-      // (mexer no scrollTop aqui cancelaria a animação)
+      const esquerda = el.offsetLeft - folgaDe(n);
+      // (mexer só no scrollTop aqui cancelaria a animação: vai tudo num scrollTo só)
       if (suave && !reduzirMovimento()) {
         alvo = n;
         clearTimeout(fimAlvo);
         fimAlvo = setTimeout(() => { alvo = null; atualizar(); }, 1200); // se um arraste interromper a animação
-        container.scrollTo({ left: esquerda, behavior: 'smooth' });
+        container.scrollTo({ left: esquerda, top: 0, behavior: 'smooth' });
       } else { alvo = null; container.scrollTop = 0; container.scrollLeft = esquerda; }
       // a página nova já conta como atual (a animação termina sozinha)
       for (let k = Math.max(1, n - RENDER_RAIO); k <= Math.min(total, n + RENDER_RAIO); k++) renderizar(k);
@@ -181,32 +193,49 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
       if (!suave) atualizar();
       return;
     }
+    alvo = null;
+    clearTimeout(fimAlvo);
     container.scrollTop = el.offsetTop + posicao * (el.offsetHeight + ESPACO);
     atualizar();
   }
 
   // Modo página: toque nas bordas e roda do mouse viram a página
   const virar = (delta) => irPara(atual.pagina + delta, 0, { suave: true });
+  const temSelecao = () => String(globalThis.getSelection?.() ?? '').trim() !== '';
+  let selecaoNoToque = false;
+  let toquePendente = 0;
+  const aoApertar = () => { selecaoNoToque = temSelecao(); };
   const aoClicar = (ev) => {
-    if (!emPagina() || ev.button !== 0) return;
-    if (String(globalThis.getSelection?.() ?? '').trim()) return;
+    clearTimeout(toquePendente);
+    if (!emPagina() || ev.button !== 0 || ev.detail > 1) return;
+    if (selecaoNoToque || temSelecao()) return; // o clique só desfez uma seleção
     if (ev.target instanceof Element && ev.target.closest('button, a, input, .flutuante')) return;
     const caixa = container.getBoundingClientRect();
     const x = (ev.clientX - caixa.left) / caixa.width;
-    if (x < 0.3) virar(-1);
-    else if (x > 0.7) virar(1);
+    const delta = x < 0.3 ? -1 : x > 0.7 ? 1 : 0;
+    if (!delta) return;
+    // Espera um instante: duplo clique (selecionar palavra) ou toque num trecho marcado não viram a página.
+    toquePendente = setTimeout(() => {
+      if (ev.defaultPrevented || temSelecao()) return;
+      virar(delta);
+    }, 260);
   };
-  let ultimaRoda = 0;
+  const aoDuploClique = () => clearTimeout(toquePendente);
+  let ultimoGiro = 0;
   const aoRodar = (ev) => {
     if (!emPagina() || ev.ctrlKey || Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
-    if (container.scrollHeight > container.clientHeight + 2) return; // com zoom, a roda rola a página
+    const el = elementos[atual.pagina - 1];
+    if (el.offsetHeight + MARGEM * 2 > container.clientHeight + 2) return; // página maior que a tela (zoom): a roda rola
     ev.preventDefault();
+    // Um gesto (inclusive a inércia do touchpad) vira só uma página: precisa de uma pausa antes do próximo.
     const agora = Date.now();
-    if (agora - ultimaRoda < 350) return;
-    ultimaRoda = agora;
-    virar(ev.deltaY > 0 ? 1 : -1);
+    const parado = agora - ultimoGiro > 250;
+    ultimoGiro = agora;
+    if (parado) virar(ev.deltaY > 0 ? 1 : -1);
   };
+  container.addEventListener('pointerdown', aoApertar);
   container.addEventListener('click', aoClicar);
+  container.addEventListener('dblclick', aoDuploClique);
   container.addEventListener('wheel', aoRodar, { passive: false });
 
   function refazer() {
@@ -239,6 +268,7 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
       if (novo === zoom) return;
       zoom = novo;
       refazer();
+      container.dispatchEvent(new CustomEvent('zoom-mudou'));
     },
     zoom: () => zoom,
     modo: () => modo,
@@ -248,13 +278,17 @@ export async function criarVisualizador(container, pdf, { aoMudarPagina, modo: m
       modo = novo;
       zoom = 1;
       refazer();
+      container.dispatchEvent(new CustomEvent('zoom-mudou'));
     },
     elementoDaPagina: (n) => elementos[n - 1],
     renderizadas: () => [...renderizadas.keys()].filter((n) => elementos[n - 1].dataset.renderizada),
     destruir() {
       observador.disconnect();
       container.removeEventListener('scroll', aoRolar);
+      container.removeEventListener('pointerdown', aoApertar);
       container.removeEventListener('click', aoClicar);
+      container.removeEventListener('dblclick', aoDuploClique);
+      clearTimeout(toquePendente);
       container.removeEventListener('wheel', aoRodar);
       container.classList.remove('modo-pagina');
       cancelAnimationFrame(quadro);

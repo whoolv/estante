@@ -84,3 +84,23 @@ describe('exportar e importar', () => {
     await expect(repo.importarDados({ foo: 1 })).rejects.toBeInstanceOf(ErroBackupInvalido);
   });
 });
+
+describe('backup com itens estragados', () => {
+  const ID = 'a'.repeat(64);
+  it('validarBackup descarta itens com dados errados e devolve o resto', () => {
+    const limpo = validarBackup({
+      app: 'estante', versao: 1,
+      livros: [{ id: ID, titulo: 'Ok', pagina: 3, posicao: 0.2, ultimaLeitura: 10 }, { id: '', titulo: 'X', pagina: 1 }, { id: ID, titulo: 5, pagina: 'x' }],
+      marcadores: [{ id: 'm1', livroId: ID, pagina: 2, nome: 'a', criadoEm: 1 }, { id: 'm2', livroId: ID, pagina: -1 }, null],
+      marcas: [{ id: 'k1', livroId: ID, pagina: 2, texto: 'oi', rects: [{ x: 0, y: 0, w: 1, h: 1 }], criadoEm: 1 }, { id: 'k2', livroId: ID, pagina: 2, texto: 'sem rects' }, { id: 'k3', livroId: ID, pagina: 2, texto: 't', rects: [{ x: 'a' }] }],
+    });
+    expect(limpo.livros.map((l) => l.titulo)).toEqual(['Ok']);
+    expect(limpo.marcadores.map((m) => m.id)).toEqual(['m1']);
+    expect(limpo.marcas.map((m) => m.id)).toEqual(['k1']);
+  });
+  it('importar um backup com marca estragada não quebra a lista de marcas do livro', async () => {
+    const repo = await novoRepo();
+    await repo.importarDados({ app: 'estante', versao: 1, exportadoEm: 1, livros: [], marcadores: [], marcas: [{ id: 'x', livroId: ID, pagina: 1, texto: 'sem rects' }] });
+    await expect(repo.listarMarcas(ID)).resolves.toEqual([]);
+  });
+});

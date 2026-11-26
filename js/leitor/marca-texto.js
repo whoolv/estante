@@ -103,6 +103,7 @@ export async function instalarMarcaTexto(ctx) {
     const n = Number(pagina.dataset.pagina);
     const tocada = marcas.find((m) => m.pagina === n && m.rects.some((r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h));
     if (!tocada) { if (acao && acao !== marcarSelecao) esconder(); return; }
+    ev.preventDefault(); // o toque foi no trecho marcado: não vira a página
     mostrarPerto({ left: ev.clientX, top: ev.clientY, width: 0, bottom: ev.clientY }, 'Remover marca', async () => {
       await repo.removerMarca(tocada.id);
       await recarregar();

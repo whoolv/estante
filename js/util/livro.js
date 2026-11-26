@@ -20,3 +20,20 @@ export function tituloPareceArquivo(titulo) {
   const t = String(titulo ?? '').trim();
   return ARQUIVO.test(t) || /^microsoft (word|powerpoint|excel) - /i.test(t);
 }
+
+const NOME_GENERICO = /^(download|arquivo|file|documento?|scan|digitalizado|livro|book|untitled|sem t[ií]tulo)\b/i;
+const PARECE_CODIGO = /^[0-9a-f_\- ]{12,}$/i;
+
+/**
+ * Título melhor para um livro cujo título interno é nome de arquivo (ex.: "Kurose_menor.indb").
+ * Usa o nome do arquivo do PDF quando ele diz algo; senão, só tira a extensão do título antigo.
+ * Devolve null quando não há nada a corrigir.
+ */
+export function tituloCorrigido(titulo, arquivoNome) {
+  if (!tituloPareceArquivo(titulo)) return null;
+  const doArquivo = arquivoNome ? tituloInicial('', arquivoNome) : '';
+  if (doArquivo.length >= 3 && !NOME_GENERICO.test(doArquivo) && !PARECE_CODIGO.test(doArquivo)) return doArquivo;
+  const semExtensao = String(titulo).replace(/^microsoft (word|powerpoint|excel) - /i, '').replace(/\.[a-z0-9]{1,5}$/i, '')
+    .replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return semExtensao || null;
+}

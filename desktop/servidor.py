@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 import threading
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -29,6 +30,26 @@ self.addEventListener('activate', (ev) => {
   })());
 });
 """
+
+
+# Só o que o app usa; o resto da pasta (código-fonte, testes, .git) não sai daqui.
+ARQUIVOS_SOLTOS = {"", "index.html", "manifest.webmanifest"}
+PASTAS_DO_APP = ("css/", "js/", "vendor/", "icons/")
+
+
+def _do_app(caminho: str) -> bool:
+    c = caminho.lstrip("/")
+    return c in ARQUIVOS_SOLTOS or c.startswith(PASTAS_DO_APP)
+
+
+class _Servidor(ThreadingHTTPServer):
+    allow_reuse_address = False  # no Windows, reaproveitar a porta deixaria dois programas na mesma
+    daemon_threads = True
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class _Pedidos(SimpleHTTPRequestHandler):
@@ -56,7 +77,7 @@ class _Pedidos(SimpleHTTPRequestHandler):
 
     def _dentro_da_raiz(self) -> bool:
         caminho = unquote(urlsplit(self.path).path)
-        if ".." in caminho.replace("\\", "/").split("/"):
+        if ".." in caminho.replace("\\", "/").split("/") or not _do_app(caminho):
             return False
         destino = (self._raiz / caminho.lstrip("/\\")).resolve()
         return destino == self._raiz or self._raiz in destino.parents
@@ -96,8 +117,7 @@ class _Pedidos(SimpleHTTPRequestHandler):
 def iniciar_servidor(raiz: Path, porta: int = PORTA, ao_pedir_janela: Optional[Callable[[], None]] = None) -> ThreadingHTTPServer:
     """Sobe o servidor em segundo plano e devolve o objeto (use .shutdown() para parar)."""
     tratador = partial(_Pedidos, raiz=Path(raiz), ao_pedir_janela=ao_pedir_janela)
-    srv = ThreadingHTTPServer((HOST, porta), tratador)
-    srv.daemon_threads = True
+    srv = _Servidor((HOST, porta), tratador)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv
 

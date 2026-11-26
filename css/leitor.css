@@ -126,10 +126,13 @@ html:has(main[data-tela="leitor"]), html:has(main[data-tela="leitor"]) body { he
 .flutuante[hidden] { display: none; }
 
 /* Modo página por página: uma página na tela, vira para o lado (deslizando com o dedo, tocando nas bordas ou com as setas) */
-.rolagem.modo-pagina { overflow-x: auto; overflow-y: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.rolagem.modo-pagina {
+  overflow-x: auto; overflow-y: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  touch-action: pan-x pan-y; /* sem pinça do navegador: o zoom é o do app */
+}
 .rolagem.modo-pagina::-webkit-scrollbar { display: none; }
 .modo-pagina .paginas { display: flex; flex-direction: row; align-items: center; width: max-content; min-height: 100%; padding: 0; }
-.modo-pagina .pagina { flex: none; margin: 16px var(--folga); scroll-snap-align: center; scroll-snap-stop: always; }
+.modo-pagina .pagina { flex: none; margin-top: 16px; margin-bottom: 16px; scroll-snap-align: center; scroll-snap-stop: always; }
 
 /* Temas de leitura */
 .leitor[data-tema="sepia"] .rolagem { background: #2b251c; }
@@ -171,3 +174,4 @@ html:has(main[data-tela="leitor"]), html:has(main[data-tela="leitor"]) body { he
 .amostra-sepia { background: #f1e4c8; color: #3b2f1e; }
 .amostra-escuro { background: #262522; color: #e6e1d6; }
 .amostra-preto { background: #000; color: #d9d4c8; }
+.leitor:is([data-tema="escuro"], [data-tema="preto"]) .textLayer ::selection { background: rgba(150, 190, 255, .55); }

@@ -1,7 +1,7 @@
 // Tela inicial: "Continuar lendo" + a estante com as capas.
 import { hashArquivo } from '../util/hash.js';
 import { tempoRelativo } from '../util/tempo.js';
-import { percentualLido, tituloInicial, tituloPareceArquivo } from '../util/livro.js';
+import { percentualLido, tituloInicial, tituloCorrigido } from '../util/livro.js';
 import { comoInstalar, ambienteAtual, temConvite, usarConvite } from '../util/instalar.js';
 import { normalizarBusca } from '../util/texto.js';
 import { ErroLivroRepetido, ErroSemEspaco } from '../dados/repositorio.js';
@@ -269,11 +269,15 @@ export async function mostrarEstante(main, repo) {
     dlg.querySelector('#dlg-remover-texto').textContent =
       `“${livro.titulo}” sai deste aparelho junto com o progresso, os marcadores e o marca-texto dele.`;
     if ((await abrirDialogo(dlg)) !== 'remover') return;
+    const posicao = livros.findIndex((l) => l.id === livro.id);
     await repo.removerLivro(livro.id);
     const url = urls.get(livro.id);
     if (url) URL.revokeObjectURL(url);
     urls.delete(livro.id);
     await desenhar();
+    // o foco vai para o livro que ficou no lugar (ou o anterior); sem livros, para Adicionar PDF
+    const capas = lista.querySelectorAll('.capa');
+    (capas[Math.min(posicao, capas.length - 1)] ?? botaoAdicionar).focus();
     anunciar(`“${livro.titulo}” foi removido.`);
   }
 
@@ -304,7 +308,13 @@ export async function mostrarEstante(main, repo) {
       return;
     }
     if ((await abrirDialogo(document.getElementById('dlg-importar'))) !== 'juntar') return;
-    const r = await repo.importarDados(dados);
+    let r;
+    try {
+      r = await repo.importarDados(dados);
+    } catch {
+      avisos.replaceChildren(el('p', { className: 'aviso erro', textContent: 'Não foi possível importar as marcações. Tente de novo.' }));
+      return;
+    }
     await desenhar();
     const n = (q, um, varios) => `${q} ${q === 1 ? um : varios}`;
     const texto = `Importado: ${n(r.livros, 'livro', 'livros')}, ${n(r.marcadores, 'marcador', 'marcadores')}, ${n(r.marcas, 'trecho', 'trechos')}.`;
@@ -396,6 +406,8 @@ export function abrirDialogo(dlg, aoAbrir) {
 
 const PASSOS = {
   ios: ['Toque no botão Compartilhar do Safari (o quadrado com a seta para cima).', 'Escolha Adicionar à Tela de Início.', 'Toque em Adicionar. A Estante aparece na tela de início como um app.'],
+  'ios-outro': ['Toque no botão Compartilhar do navegador (o quadrado com a seta para cima, perto da barra de endereço).', 'Escolha Adicionar à Tela de Início.', 'Se a opção não aparecer, abra este endereço no Safari e instale por lá.'],
+  'abrir-no-navegador': ['Este navegador, dentro de outro app, não instala sites.', 'Toque no menu (⋯) e escolha Abrir no Safari (ou no navegador).', 'Lá, toque em Instalar app de novo.'],
   menu: ['Toque no menu do navegador (⋮, no canto de cima).', 'Escolha Instalar app ou Adicionar à tela inicial.', 'Confirme. A Estante aparece junto com os seus apps.'],
 };
 
@@ -405,14 +417,18 @@ async function mostrarPassosInstalar(jeito) {
   await abrirDialogo(dlg);
 }
 
-/** Corrige títulos que vieram com o nome interno do arquivo (ex.: "Kurose_menor.indb"). */
+const CHAVE_TITULOS = 'estante:titulos-corrigidos-v1';
+
+/**
+ * Corrige, uma vez só, títulos que vieram com o nome interno do arquivo (ex.: "Kurose_menor.indb").
+ * Livros que a pessoa renomeou não são tocados. Livros novos já entram com o título certo.
+ */
 async function corrigirTitulosDeArquivo(repo, livros) {
-  let mudou = false;
+  try { if (localStorage.getItem(CHAVE_TITULOS)) return; } catch { return; }
   for (const l of livros) {
-    if (l.arquivoNome && tituloPareceArquivo(l.titulo)) {
-      const novo = tituloInicial('', l.arquivoNome);
-      if (novo && novo !== l.titulo) { await repo.renomearLivro(l.id, novo); l.titulo = novo; mudou = true; }
-    }
+    if (l.tituloManual) continue;
+    const novo = tituloCorrigido(l.titulo, l.arquivoNome);
+    if (novo && novo !== l.titulo) { await repo.renomearLivro(l.id, novo, { automatico: true }); l.titulo = novo; }
   }
-  return mudou;
+  try { localStorage.setItem(CHAVE_TITULOS, '1'); } catch { /* ignora */ }
 }

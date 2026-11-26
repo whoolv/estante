@@ -119,7 +119,7 @@ export async function instalarPainel(ctx) {
   /** Ao escolher um destino: vai para a página e, na gaveta, fecha. */
   function irPara(pagina) {
     ctx.irPara(pagina);
-    if (painel.classList.contains('gaveta')) fecharPainel(false);
+    if (painel.classList.contains('gaveta')) { fecharPainel(false); ctx.rolagem.focus({ preventScroll: true }); }
   }
 
   // ---- Sumário ----
@@ -128,7 +128,7 @@ export async function instalarPainel(ctx) {
   const itensSumario = [];
   if (sumario.length) {
     for (const item of sumario) {
-      const b = el('button', { type: 'button', className: 'item-lista', textContent: item.titulo });
+      const b = el('button', { type: 'button', className: 'item-lista', textContent: item.titulo || 'Sem título' });
       b.style.setProperty('--nivel', item.nivel);
       b.dataset.pagina = String(item.pagina);
       b.addEventListener('click', () => irPara(item.pagina));

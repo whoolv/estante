@@ -1,6 +1,6 @@
 // Service worker da Estante: guarda o app no aparelho para abrir sem internet.
 // Os livros não passam por aqui (ficam no IndexedDB).
-const VERSAO = 'estante-95f5e550c773';
+const VERSAO = 'estante-71221b0641ad';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -44,6 +44,9 @@ self.addEventListener('install', (ev) => {
   // A versão nova só entra quando o app é fechado e aberto de novo.
   ev.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS.map((a) => new Request(a, { cache: 'reload' })))));
 });
+
+// O app pede para trocar de versão quando vai para o fundo (ninguém está olhando).
+self.addEventListener('message', (ev) => { if (ev.data === 'trocar-versao') self.skipWaiting(); });
 
 self.addEventListener('activate', (ev) => {
   ev.waitUntil((async () => {

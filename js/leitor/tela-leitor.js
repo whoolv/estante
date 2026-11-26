@@ -113,6 +113,7 @@ export async function mostrarLeitor(main, repo, id) {
   campo.addEventListener('blur', () => { campo.value = String(vis.paginaAtual().pagina); });
 
   const mostrarZoom = () => { valorZoom.textContent = `${Math.round(vis.zoom() * 100)}%`; };
+  rolagem.addEventListener('zoom-mudou', mostrarZoom);
   botaoMenos.addEventListener('click', () => { vis.definirZoom(Math.max(ZOOM_MIN, vis.zoom() - 0.1)); mostrarZoom(); });
   botaoMais.addEventListener('click', () => { vis.definirZoom(Math.min(ZOOM_MAX, vis.zoom() + 0.1)); mostrarZoom(); });
   botaoLargura.addEventListener('click', () => { vis.definirZoom('largura'); mostrarZoom(); });
