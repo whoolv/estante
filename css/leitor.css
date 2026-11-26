@@ -117,3 +117,8 @@ main[data-tela="leitor"] { height: 100vh; height: 100dvh; overflow: hidden; }
   .campo-busca { flex-basis: 100%; max-width: none; }
   .contador-busca { flex: 1; }
 }
+
+/* Marca-texto */
+.camada-marcas .marca { position: absolute; background: rgba(240, 196, 96, .5); mix-blend-mode: multiply; border-radius: 2px; }
+.flutuante { position: fixed; z-index: 40; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+.flutuante[hidden] { display: none; }
