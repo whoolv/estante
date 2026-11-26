@@ -5,3 +5,4 @@ playwright-report/
 desktop/.venv/
 __pycache__/
 .pytest_cache/
+docs/superpowers/
