@@ -29,6 +29,10 @@ const motivoDoErro = (e, arquivo) => {
 };
 
 let pediuPersistencia = false;
+let avisoPendente = null;
+
+/** Mostra um aviso na próxima vez que a estante abrir (ex.: livro não encontrado). */
+export function avisarNaEstante(texto) { avisoPendente = texto; }
 
 /** Adiciona arquivos à estante. Nunca lança: devolve o que entrou e o que falhou. */
 export async function adicionarArquivos(files, repo) {
@@ -257,6 +261,10 @@ export async function mostrarEstante(main, repo) {
   main.addEventListener('drop', aoSoltar);
 
   await desenhar();
+  if (avisoPendente) {
+    avisos.replaceChildren(el('p', { className: 'aviso erro', textContent: avisoPendente }));
+    avisoPendente = null;
+  }
   main.dataset.pronta = 'estante';
 
   return () => {

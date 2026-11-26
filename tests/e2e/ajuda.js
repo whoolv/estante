@@ -27,3 +27,23 @@ export async function abrirEstanteCom(page, ...nomes) {
 }
 
 export const projeto = () => (globalThis.__projeto ?? '');
+
+/** Abre na estante, adiciona o PDF e abre o livro no leitor. */
+export async function abrirLivro(page, nome = 'livro-teste.pdf') {
+  await abrirEstanteCom(page, nome);
+  await page.locator('.livro .capa').first().click();
+  await esperarLeitor(page);
+}
+
+export async function esperarLeitor(page) {
+  await page.locator('main[data-pronta="leitor"]').waitFor({ state: 'attached' });
+}
+
+export const campoPagina = (page) => page.getByRole('spinbutton', { name: 'Página atual' });
+
+export async function irParaPagina(page, n) {
+  const campo = campoPagina(page);
+  await campo.fill(String(n));
+  await campo.press('Enter');
+  await expect(page.locator(`.pagina[data-pagina="${n}"]`)).toBeInViewport();
+}

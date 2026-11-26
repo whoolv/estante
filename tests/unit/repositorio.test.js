@@ -110,4 +110,15 @@ describe('repositório', () => {
     expect(l).toMatchObject({ titulo: 'Meu', pagina: 7, ultimaLeitura: 50 });
     expect(await repo._lerPendente('A')).toBeNull();
   });
+
+  it('salvarProgressoRapido grava na hora, sem esperar leitura', async () => {
+    const repo = await novoRepo();
+    const l = await repo.adicionarLivro(livro('A'));
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put');
+    const promessa = repo.salvarProgressoRapido({ ...l, pagina: 6, posicao: 0.25 }, 300);
+    expect(put).toHaveBeenCalledTimes(1);
+    await promessa;
+    vi.restoreAllMocks();
+    expect(await repo.obterLivro('A')).toMatchObject({ pagina: 6, posicao: 0.25, ultimaLeitura: 300 });
+  });
 });

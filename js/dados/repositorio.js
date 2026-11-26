@@ -160,6 +160,27 @@ export async function abrirRepositorio(nomeBanco = 'estante') {
       });
     },
 
+    /**
+     * Grava o progresso de um livro já conhecido numa única ida ao banco, sem ler antes.
+     * Usado ao fechar/esconder a página, quando não há tempo para duas idas.
+     */
+    salvarProgressoRapido(livro, agora = Date.now()) {
+      const registro = {
+        ...livro,
+        pagina: Math.min(Math.max(1, Math.round(livro.pagina)), livro.paginas),
+        posicao: Math.min(Math.max(0, livro.posicao ?? 0), 1),
+        ultimaLeitura: agora,
+      };
+      const tx = db.transaction(['livros'], 'readwrite');
+      tx.objectStore('livros').put(registro);
+      const fim = new Promise((ok, falha) => {
+        tx.oncomplete = () => ok(registro);
+        tx.onabort = tx.onerror = () => falha(tx.error);
+      });
+      tx.commit?.();
+      return fim;
+    },
+
     async ultimoLido() {
       const lista = await this.listarLivros();
       return lista.find((l) => l.ultimaLeitura != null) ?? null;
